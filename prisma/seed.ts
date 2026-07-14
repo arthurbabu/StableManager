@@ -93,6 +93,14 @@ async function main() {
     });
   }
 
+  // A couple of overlapping shifts today, to show side-by-side layout on the calendar
+  await prisma.shift.create({
+    data: { userId: manager.id, date: today, startTime: "12:00", endTime: "20:00", notes: "Evening cover" },
+  });
+  await prisma.shift.create({
+    data: { userId: groom1.id, date: today, startTime: "13:00", endTime: "17:00" },
+  });
+
   // Vacation requests
   await prisma.vacationRequest.create({
     data: {

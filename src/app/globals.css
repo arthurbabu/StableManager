@@ -3,6 +3,12 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Calendar event-type colors (validated categorical palette, slots 1-4) */
+  --cal-shift: #2a78d6;
+  --cal-task: #1baf7a;
+  --cal-vacation: #eda100;
+  --cal-competition: #008300;
 }
 
 @theme inline {
@@ -16,6 +22,11 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+
+    --cal-shift: #3987e5;
+    --cal-task: #199e70;
+    --cal-vacation: #c98500;
+    --cal-competition: #008300;
   }
 }
 

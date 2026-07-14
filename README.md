@@ -59,6 +59,7 @@ src/proxy.ts                Route protection (redirects unauthenticated users to
 src/lib/                   Prisma client singleton + auth/role helper functions
 src/app/login/             Login page
 src/app/(app)/             Everything behind login, wrapped in the app shell
+  calendar/                Doctolib-style weekly time-grid view of everything, color-coded by type
   staff/                   Weekly shift schedule + shift creation
   staff/vacations/         Vacation requests + approval
   horses/                  Horse profiles + care task scheduling
