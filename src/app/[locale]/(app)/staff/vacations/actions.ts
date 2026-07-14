@@ -46,6 +46,7 @@ export async function reviewVacation(formData: FormData) {
   });
 
   revalidatePath("/staff/vacations");
+  revalidatePath("/calendar");
   revalidatePath("/");
 }
 

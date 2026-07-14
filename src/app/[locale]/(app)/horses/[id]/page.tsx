@@ -4,6 +4,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser, canManage } from "@/lib/auth-helpers";
 import { getDateFnsLocale } from "@/i18n/dateLocale";
+import { TASK_TYPES } from "@/lib/constants";
 import { Card, PageHeader, EmptyState, Badge, Button, Input, Select, Textarea, Label } from "@/components/ui";
 import {
   updateHorse,
@@ -12,8 +13,6 @@ import {
   toggleCareTaskDone,
   deleteCareTask,
 } from "../actions";
-
-const TASK_TYPES = ["FEEDING", "GROOMING", "TRAINING", "FARRIER", "VET", "TURNOUT", "OTHER"] as const;
 
 export default async function HorseDetailPage({
   params,

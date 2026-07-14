@@ -26,6 +26,7 @@ export async function createCompetition(formData: FormData) {
   });
 
   revalidatePath("/competitions");
+  revalidatePath("/calendar");
   const locale = await getLocale();
   redirect({ href: `/competitions/${competition.id}`, locale });
 }

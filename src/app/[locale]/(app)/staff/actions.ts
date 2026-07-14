@@ -28,6 +28,7 @@ export async function createShift(formData: FormData) {
   });
 
   revalidatePath("/staff");
+  revalidatePath("/calendar");
   revalidatePath("/");
 }
 

@@ -107,6 +107,7 @@ export async function createCareTask(formData: FormData) {
   });
 
   revalidatePath(`/horses/${horseId}`);
+  revalidatePath("/calendar");
   revalidatePath("/");
 }
 

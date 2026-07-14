@@ -18,7 +18,9 @@
     "update": "Mettre à jour",
     "activate": "Activer",
     "deactivate": "Désactiver",
-    "signOut": "Déconnexion"
+    "signOut": "Déconnexion",
+    "close": "Fermer",
+    "error": "Une erreur s'est produite. Réessayez."
   },
   "Roles": {
     "ADMIN": "Administrateur",
@@ -104,7 +106,8 @@
     "noRequests": "Aucune demande de congé pour le moment.",
     "reviewedBy": "Validé par {name}",
     "approve": "Approuver",
-    "reject": "Refuser"
+    "reject": "Refuser",
+    "details": "Détails du congé"
   },
   "Horses": {
     "title": "Chevaux",

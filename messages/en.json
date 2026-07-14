@@ -18,7 +18,9 @@
     "update": "Update",
     "activate": "Activate",
     "deactivate": "Deactivate",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "close": "Close",
+    "error": "Something went wrong. Please try again."
   },
   "Roles": {
     "ADMIN": "Admin",
@@ -104,7 +106,8 @@
     "noRequests": "No vacation requests yet.",
     "reviewedBy": "Reviewed by {name}",
     "approve": "Approve",
-    "reject": "Reject"
+    "reject": "Reject",
+    "details": "Vacation details"
   },
   "Horses": {
     "title": "Horses",
