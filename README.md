@@ -10,6 +10,7 @@ screen as a PWA) or a desktop browser — no app store install required.
 - **Next.js** (App Router) + TypeScript + Tailwind CSS
 - **Prisma** ORM — SQLite for local dev, swap to Postgres for production
 - **NextAuth v5** — email/password login, JWT sessions, role-based access
+- **next-intl** — French (default) and English, with a language switcher
 - Server actions for all writes (no separate API layer to maintain)
 
 ## Roles
@@ -49,23 +50,39 @@ openssl rand -base64 32
 
 Change these passwords (or deactivate the accounts) before using this with real data.
 
+## Language
+
+The app is in **French by default** (no URL prefix, e.g. `/horses`) with **English**
+available via a switcher in the sidebar/header (prefixed, e.g. `/en/horses`). All UI
+text, dates, and pluralization are localized; role names, task types, horse sex, and
+vacation statuses are translated too. To add a third language: add its code to
+`src/i18n/routing.ts` and add a matching `messages/<locale>.json` (copy `en.json`'s
+key structure — every namespace/key must exist in every locale file).
+
 ## Project structure
 
 ```
 prisma/schema.prisma       Data model (users, shifts, vacations, horses, care tasks, competitions)
 prisma/seed.ts             Demo data
+messages/fr.json           French strings (default locale)
+messages/en.json           English strings
+src/i18n/routing.ts        Locale list, default locale, URL prefix strategy
+src/i18n/navigation.ts     Locale-aware Link/redirect/usePathname/useRouter
+src/i18n/request.ts        Loads the message catalog per request
+src/i18n/dateLocale.ts     Maps app locale -> date-fns locale for date formatting
 src/auth.ts                NextAuth config (credentials provider, JWT, roles)
-src/proxy.ts                Route protection (redirects unauthenticated users to /login)
+src/proxy.ts                Route protection + locale routing (combined middleware)
 src/lib/                   Prisma client singleton + auth/role helper functions
-src/app/login/             Login page
-src/app/(app)/             Everything behind login, wrapped in the app shell
+src/app/[locale]/layout.tsx  Root layout (sets <html lang>, loads messages)
+src/app/[locale]/login/     Login page
+src/app/[locale]/(app)/     Everything behind login, wrapped in the app shell
   calendar/                Doctolib-style weekly time-grid view of everything, color-coded by type
   staff/                   Weekly shift schedule + shift creation
   staff/vacations/         Vacation requests + approval
   horses/                  Horse profiles + care task scheduling
   competitions/            Competitions + entries/results
   admin/users/             Staff account management (ADMIN only)
-src/components/            Shared UI (nav, shell, buttons/inputs/cards)
+src/components/            Shared UI (nav, shell, buttons/inputs/cards, language switcher)
 ```
 
 ## Installing on an iPhone

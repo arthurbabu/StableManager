@@ -1,11 +1,17 @@
-import Link from "next/link";
 import { endOfDay, format, startOfDay } from "date-fns";
+import { getLocale, getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser, canManage } from "@/lib/auth-helpers";
+import { getDateFnsLocale } from "@/i18n/dateLocale";
 import { Card, Badge, EmptyState, PageHeader } from "@/components/ui";
+import { Link } from "@/i18n/navigation";
 
 export default async function DashboardPage() {
   const user = await requireUser();
+  const t = await getTranslations("Dashboard");
+  const tTaskTypes = await getTranslations("TaskTypes");
+  const locale = await getLocale();
+  const dateLocale = getDateFnsLocale(locale);
   const todayStart = startOfDay(new Date());
   const todayEnd = endOfDay(new Date());
 
@@ -52,17 +58,17 @@ export default async function DashboardPage() {
   return (
     <div>
       <PageHeader
-        title={`Welcome, ${user.name?.split(" ")[0]}`}
-        subtitle={format(new Date(), "EEEE, MMMM d, yyyy")}
+        title={t("welcome", { name: user.name?.split(" ")[0] ?? "" })}
+        subtitle={format(new Date(), "EEEE d MMMM yyyy", { locale: dateLocale })}
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <h2 className="mb-3 font-medium text-stone-900 dark:text-stone-50">
-            Today&apos;s shifts
+            {t("todaysShifts")}
           </h2>
           {todaysShifts.length === 0 ? (
-            <EmptyState message="No shifts scheduled for today." />
+            <EmptyState message={t("noShiftsToday")} />
           ) : (
             <ul className="space-y-2">
               {todaysShifts.map((shift) => (
@@ -84,16 +90,16 @@ export default async function DashboardPage() {
             href="/staff"
             className="mt-3 inline-block text-sm font-medium text-emerald-700 dark:text-emerald-400"
           >
-            View full schedule →
+            {t("viewFullSchedule")}
           </Link>
         </Card>
 
         <Card>
           <h2 className="mb-3 font-medium text-stone-900 dark:text-stone-50">
-            Your tasks today
+            {t("yourTasksToday")}
           </h2>
           {myTasksToday.length === 0 ? (
-            <EmptyState message="Nothing assigned to you today." />
+            <EmptyState message={t("noTasksToday")} />
           ) : (
             <ul className="space-y-2">
               {myTasksToday.map((task) => (
@@ -104,7 +110,7 @@ export default async function DashboardPage() {
                   <span className="font-medium text-stone-700 dark:text-stone-200">
                     {task.horse.name}
                   </span>
-                  <Badge>{task.type}</Badge>
+                  <Badge>{tTaskTypes(task.type)}</Badge>
                 </li>
               ))}
             </ul>
@@ -113,17 +119,17 @@ export default async function DashboardPage() {
             href="/horses"
             className="mt-3 inline-block text-sm font-medium text-emerald-700 dark:text-emerald-400"
           >
-            View horses →
+            {t("viewHorses")}
           </Link>
         </Card>
 
         {canManage(user.role) && (
           <Card>
             <h2 className="mb-3 font-medium text-stone-900 dark:text-stone-50">
-              Vacation requests awaiting review
+              {t("vacationsAwaitingReview")}
             </h2>
             {pendingVacations.length === 0 ? (
-              <EmptyState message="No pending requests." />
+              <EmptyState message={t("noPendingRequests")} />
             ) : (
               <ul className="space-y-2">
                 {pendingVacations.map((v) => (
@@ -135,7 +141,8 @@ export default async function DashboardPage() {
                       {v.user.name}
                     </span>
                     <span className="text-stone-500 dark:text-stone-400">
-                      {format(v.startDate, "MMM d")}–{format(v.endDate, "MMM d")}
+                      {format(v.startDate, "d MMM", { locale: dateLocale })}–
+                      {format(v.endDate, "d MMM", { locale: dateLocale })}
                     </span>
                   </li>
                 ))}
@@ -145,17 +152,17 @@ export default async function DashboardPage() {
               href="/staff/vacations"
               className="mt-3 inline-block text-sm font-medium text-emerald-700 dark:text-emerald-400"
             >
-              Review requests →
+              {t("reviewRequests")}
             </Link>
           </Card>
         )}
 
         <Card>
           <h2 className="mb-3 font-medium text-stone-900 dark:text-stone-50">
-            Who&apos;s off soon
+            {t("whosOffSoon")}
           </h2>
           {upcomingVacations.length === 0 ? (
-            <EmptyState message="No upcoming approved vacations." />
+            <EmptyState message={t("noUpcomingVacations")} />
           ) : (
             <ul className="space-y-2">
               {upcomingVacations.map((v) => (
@@ -167,7 +174,8 @@ export default async function DashboardPage() {
                     {v.user.name}
                   </span>
                   <span className="text-stone-500 dark:text-stone-400">
-                    {format(v.startDate, "MMM d")}–{format(v.endDate, "MMM d")}
+                    {format(v.startDate, "d MMM", { locale: dateLocale })}–
+                    {format(v.endDate, "d MMM", { locale: dateLocale })}
                   </span>
                 </li>
               ))}
@@ -177,10 +185,10 @@ export default async function DashboardPage() {
 
         <Card className="lg:col-span-2">
           <h2 className="mb-3 font-medium text-stone-900 dark:text-stone-50">
-            Upcoming competitions
+            {t("upcomingCompetitions")}
           </h2>
           {upcomingCompetitions.length === 0 ? (
-            <EmptyState message="No competitions scheduled." />
+            <EmptyState message={t("noCompetitions")} />
           ) : (
             <ul className="space-y-2">
               {upcomingCompetitions.map((c) => (
@@ -198,7 +206,8 @@ export default async function DashboardPage() {
                       )}
                     </span>
                     <span className="text-stone-500 dark:text-stone-400">
-                      {format(c.startDate, "MMM d")} · {c.entries.length} entries
+                      {format(c.startDate, "d MMM", { locale: dateLocale })} ·{" "}
+                      {t("entries", { count: c.entries.length })}
                     </span>
                   </Link>
                 </li>
@@ -209,7 +218,7 @@ export default async function DashboardPage() {
             href="/competitions"
             className="mt-3 inline-block text-sm font-medium text-emerald-700 dark:text-emerald-400"
           >
-            View all competitions →
+            {t("viewAllCompetitions")}
           </Link>
         </Card>
       </div>

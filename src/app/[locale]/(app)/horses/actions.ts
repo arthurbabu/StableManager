@@ -1,9 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { getLocale } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole, requireUser } from "@/lib/auth-helpers";
+import { redirect } from "@/i18n/navigation";
 
 function parseOptionalDate(value: FormDataEntryValue | null) {
   const str = String(value ?? "").trim();
@@ -32,7 +33,8 @@ export async function createHorse(formData: FormData) {
   });
 
   revalidatePath("/horses");
-  redirect(`/horses/${horse.id}`);
+  const locale = await getLocale();
+  redirect({ href: `/horses/${horse.id}`, locale });
 }
 
 export async function updateHorse(formData: FormData) {

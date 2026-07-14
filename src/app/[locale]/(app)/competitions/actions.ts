@@ -1,9 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { getLocale } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-helpers";
+import { redirect } from "@/i18n/navigation";
 
 export async function createCompetition(formData: FormData) {
   await requireRole(["ADMIN", "MANAGER"]);
@@ -25,7 +26,8 @@ export async function createCompetition(formData: FormData) {
   });
 
   revalidatePath("/competitions");
-  redirect(`/competitions/${competition.id}`);
+  const locale = await getLocale();
+  redirect({ href: `/competitions/${competition.id}`, locale });
 }
 
 export async function deleteCompetition(formData: FormData) {
@@ -36,7 +38,8 @@ export async function deleteCompetition(formData: FormData) {
   await prisma.competition.delete({ where: { id } });
 
   revalidatePath("/competitions");
-  redirect("/competitions");
+  const locale = await getLocale();
+  redirect({ href: "/competitions", locale });
 }
 
 export async function addEntry(formData: FormData) {

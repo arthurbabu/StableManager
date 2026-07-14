@@ -1,20 +1,20 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Link, usePathname } from "@/i18n/navigation";
 
 export type NavItem = {
   href: string;
-  label: string;
+  key: "dashboard" | "calendar" | "staff" | "horses" | "competitions";
   icon: string;
 };
 
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: "🏠" },
-  { href: "/calendar", label: "Calendar", icon: "📅" },
-  { href: "/staff", label: "Staff", icon: "🗓️" },
-  { href: "/horses", label: "Horses", icon: "🐴" },
-  { href: "/competitions", label: "Events", icon: "🏆" },
+  { href: "/", key: "dashboard", icon: "🏠" },
+  { href: "/calendar", key: "calendar", icon: "📅" },
+  { href: "/staff", key: "staff", icon: "🗓️" },
+  { href: "/horses", key: "horses", icon: "🐴" },
+  { href: "/competitions", key: "competitions", icon: "🏆" },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -24,12 +24,11 @@ function isActive(pathname: string, href: string) {
 
 export function SidebarLinks({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();
-  const items = isAdmin
-    ? [...NAV_ITEMS, { href: "/admin/users", label: "Staff Accounts", icon: "⚙️" }]
-    : NAV_ITEMS;
+  const t = useTranslations("Nav");
+
   return (
     <nav className="flex flex-col gap-1">
-      {items.map((item) => (
+      {NAV_ITEMS.map((item) => (
         <Link
           key={item.href}
           href={item.href}
@@ -40,15 +39,30 @@ export function SidebarLinks({ isAdmin }: { isAdmin: boolean }) {
           }`}
         >
           <span aria-hidden>{item.icon}</span>
-          {item.label}
+          {t(item.key)}
         </Link>
       ))}
+      {isAdmin && (
+        <Link
+          href="/admin/users"
+          className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
+            isActive(pathname, "/admin/users")
+              ? "bg-emerald-700 text-white"
+              : "text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-neutral-800"
+          }`}
+        >
+          <span aria-hidden>⚙️</span>
+          {t("staffAccounts")}
+        </Link>
+      )}
     </nav>
   );
 }
 
 export function BottomTabBar() {
   const pathname = usePathname();
+  const t = useTranslations("Nav");
+
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-stone-200 bg-white/95 backdrop-blur pb-[env(safe-area-inset-bottom)] md:hidden dark:border-neutral-800 dark:bg-neutral-900/95">
       {NAV_ITEMS.map((item) => (
@@ -64,7 +78,7 @@ export function BottomTabBar() {
           <span className="text-lg" aria-hidden>
             {item.icon}
           </span>
-          {item.label}
+          {t(item.key)}
         </Link>
       ))}
     </nav>

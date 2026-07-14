@@ -1,0 +1,188 @@
+{
+  "Metadata": {
+    "title": "Gestion d'écurie",
+    "description": "Planning du personnel, congés, compétitions et suivi des chevaux pour votre écurie."
+  },
+  "Common": {
+    "name": "Nom",
+    "notes": "Notes",
+    "notesOptional": "Notes (optionnel)",
+    "location": "Lieu",
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "save": "Enregistrer",
+    "saveChanges": "Enregistrer les modifications",
+    "remove": "Retirer",
+    "cancel": "Annuler",
+    "add": "Ajouter",
+    "update": "Mettre à jour",
+    "activate": "Activer",
+    "deactivate": "Désactiver",
+    "signOut": "Déconnexion"
+  },
+  "Roles": {
+    "ADMIN": "Administrateur",
+    "MANAGER": "Responsable",
+    "STAFF": "Personnel"
+  },
+  "TaskTypes": {
+    "FEEDING": "Alimentation",
+    "GROOMING": "Pansage",
+    "TRAINING": "Entraînement",
+    "FARRIER": "Maréchal-ferrant",
+    "VET": "Vétérinaire",
+    "TURNOUT": "Sortie au pré",
+    "OTHER": "Autre"
+  },
+  "HorseSex": {
+    "MARE": "Jument",
+    "GELDING": "Hongre",
+    "STALLION": "Étalon"
+  },
+  "VacationStatus": {
+    "PENDING": "En attente",
+    "APPROVED": "Approuvé",
+    "REJECTED": "Refusé"
+  },
+  "Nav": {
+    "dashboard": "Tableau de bord",
+    "calendar": "Calendrier",
+    "staff": "Personnel",
+    "horses": "Chevaux",
+    "competitions": "Concours",
+    "staffAccounts": "Comptes du personnel",
+    "appName": "Gestion d'écurie"
+  },
+  "LanguageSwitcher": {
+    "label": "Langue"
+  },
+  "Login": {
+    "title": "Gestion d'écurie",
+    "subtitle": "Personnel, chevaux et concours au même endroit",
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "signIn": "Se connecter",
+    "invalidCredentials": "E-mail ou mot de passe invalide.",
+    "demoHint": "Démo : admin@stable.test / password123"
+  },
+  "Dashboard": {
+    "welcome": "Bienvenue, {name}",
+    "todaysShifts": "Services d'aujourd'hui",
+    "noShiftsToday": "Aucun service prévu aujourd'hui.",
+    "viewFullSchedule": "Voir le planning complet →",
+    "yourTasksToday": "Vos tâches du jour",
+    "noTasksToday": "Rien ne vous est assigné aujourd'hui.",
+    "viewHorses": "Voir les chevaux →",
+    "vacationsAwaitingReview": "Congés en attente de validation",
+    "noPendingRequests": "Aucune demande en attente.",
+    "reviewRequests": "Examiner les demandes →",
+    "whosOffSoon": "Prochains congés",
+    "noUpcomingVacations": "Aucun congé approuvé à venir.",
+    "upcomingCompetitions": "Concours à venir",
+    "noCompetitions": "Aucun concours programmé.",
+    "entries": "{count, plural, one {# engagé} other {# engagés}}",
+    "viewAllCompetitions": "Voir tous les concours →"
+  },
+  "Staff": {
+    "title": "Planning du personnel",
+    "dateRange": "{start} – {end}",
+    "prev": "← Préc.",
+    "next": "Suiv. →",
+    "vacations": "Congés",
+    "addShift": "Ajouter un service",
+    "staffMember": "Membre du personnel",
+    "addShiftButton": "Ajouter le service",
+    "noShiftsThisWeek": "Aucun service prévu cette semaine."
+  },
+  "Vacations": {
+    "title": "Demandes de congé",
+    "subtitleManager": "Examinez et gérez les congés de toute l'équipe",
+    "subtitleStaff": "Demandez et suivez vos congés",
+    "requestTimeOff": "Demander un congé",
+    "reasonOptional": "Motif (optionnel)",
+    "submitRequest": "Envoyer la demande",
+    "noRequests": "Aucune demande de congé pour le moment.",
+    "reviewedBy": "Validé par {name}",
+    "approve": "Approuver",
+    "reject": "Refuser"
+  },
+  "Horses": {
+    "title": "Chevaux",
+    "activeCount": "{count, plural, one {# actif} other {# actifs}}",
+    "addHorse": "Ajouter un cheval",
+    "breed": "Race",
+    "color": "Robe",
+    "sexOptional": "Sexe (optionnel)",
+    "dateOfBirth": "Date de naissance",
+    "addHorseButton": "Ajouter le cheval",
+    "noHorses": "Aucun cheval pour le moment.",
+    "inactive": "Inactif",
+    "openTasks": "{count, plural, one {# tâche en cours} other {# tâches en cours}}"
+  },
+  "HorseDetail": {
+    "markInactive": "Marquer inactif",
+    "markActive": "Marquer actif",
+    "profile": "Profil",
+    "sex": "Sexe",
+    "unspecified": "Non précisé",
+    "addCareTask": "Ajouter une tâche de soin",
+    "taskType": "Type de tâche",
+    "unassigned": "Non assigné",
+    "addTaskButton": "Ajouter la tâche",
+    "careSchedule": "Planning des soins",
+    "noTasks": "Aucune tâche de soin pour le moment.",
+    "markDone": "Marquer comme fait",
+    "markNotDone": "Marquer comme non fait"
+  },
+  "Competitions": {
+    "title": "Concours",
+    "upcomingCount": "{count, plural, one {# à venir} other {# à venir}}",
+    "addCompetition": "Ajouter un concours",
+    "endDateOptional": "Date de fin (optionnel)",
+    "addCompetitionButton": "Ajouter le concours",
+    "upcoming": "À venir",
+    "noUpcoming": "Aucun concours à venir.",
+    "past": "Passés",
+    "entries": "{count, plural, one {# engagé} other {# engagés}}"
+  },
+  "CompetitionDetail": {
+    "deleteCompetition": "Supprimer le concours",
+    "addEntry": "Ajouter un engagement",
+    "horse": "Cheval",
+    "riderOptional": "Cavalier (optionnel)",
+    "categoryClass": "Catégorie / épreuve",
+    "addEntryButton": "Ajouter l'engagement",
+    "entries": "Engagements",
+    "noEntries": "Aucun engagement pour le moment.",
+    "rider": "Cavalier",
+    "category": "Catégorie",
+    "result": "Résultat",
+    "resultPlaceholder": "ex. 1re place"
+  },
+  "Admin": {
+    "title": "Comptes du personnel",
+    "subtitle": "Créez des accès et gérez les rôles",
+    "createAccount": "Créer un compte du personnel",
+    "fullName": "Nom complet",
+    "passwordHint": "Mot de passe (8 caractères min.)",
+    "createAccountButton": "Créer le compte",
+    "team": "Équipe"
+  },
+  "Calendar": {
+    "title": "Calendrier",
+    "dateRange": "{start} – {end}",
+    "prev": "← Préc.",
+    "today": "Aujourd'hui",
+    "next": "Suiv. →",
+    "legendShift": "Service",
+    "legendTask": "Tâche de soin",
+    "legendVacation": "Congé",
+    "legendCompetition": "Concours",
+    "addShift": "+ Service",
+    "addVacation": "+ Congé",
+    "addTask": "+ Tâche",
+    "addCompetition": "+ Concours",
+    "allDay": "Journée",
+    "otherWeekNotice": "Vous consultez une autre semaine — l'indicateur d'heure actuelle n'apparaît que sur la semaine en cours."
+  }
+}

@@ -6,8 +6,10 @@ import {
   isToday,
   startOfWeek,
 } from "date-fns";
+import { getLocale, getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser, canManage } from "@/lib/auth-helpers";
+import { getDateFnsLocale } from "@/i18n/dateLocale";
 import { Card, PageHeader, EmptyState, Button, LinkButton, Input, Select } from "@/components/ui";
 import { createShift, deleteShift } from "./actions";
 
@@ -17,6 +19,10 @@ export default async function StaffPage({
   searchParams: Promise<{ week?: string }>;
 }) {
   const user = await requireUser();
+  const t = await getTranslations("Staff");
+  const tCommon = await getTranslations("Common");
+  const locale = await getLocale();
+  const dateLocale = getDateFnsLocale(locale);
   const params = await searchParams;
   const isManager = canManage(user.role);
 
@@ -47,18 +53,21 @@ export default async function StaffPage({
   return (
     <div>
       <PageHeader
-        title="Staff schedule"
-        subtitle={`${format(weekStart, "MMM d")} – ${format(weekEnd, "MMM d, yyyy")}`}
+        title={t("title")}
+        subtitle={t("dateRange", {
+          start: format(weekStart, "d MMM", { locale: dateLocale }),
+          end: format(weekEnd, "d MMM yyyy", { locale: dateLocale }),
+        })}
         action={
           <div className="flex gap-2">
             <LinkButton href={`/staff?week=${prevWeek}`} variant="secondary">
-              ← Prev
+              {t("prev")}
             </LinkButton>
             <LinkButton href={`/staff?week=${nextWeek}`} variant="secondary">
-              Next →
+              {t("next")}
             </LinkButton>
             <LinkButton href="/staff/vacations" variant="secondary">
-              Vacations
+              {t("vacations")}
             </LinkButton>
           </div>
         }
@@ -67,12 +76,12 @@ export default async function StaffPage({
       {isManager && (
         <Card className="mb-6">
           <h2 className="mb-3 font-medium text-stone-900 dark:text-stone-50">
-            Add a shift
+            {t("addShift")}
           </h2>
           <form action={createShift} className="grid grid-cols-2 gap-3 md:grid-cols-5">
             <Select name="userId" required defaultValue="" className="col-span-2 md:col-span-1">
               <option value="" disabled>
-                Staff member
+                {t("staffMember")}
               </option>
               {staff.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -83,9 +92,9 @@ export default async function StaffPage({
             <Input type="date" name="date" required defaultValue={format(anchor, "yyyy-MM-dd")} />
             <Input type="time" name="startTime" required defaultValue="08:00" />
             <Input type="time" name="endTime" required defaultValue="16:00" />
-            <Input type="text" name="notes" placeholder="Notes (optional)" />
+            <Input type="text" name="notes" placeholder={tCommon("notesOptional")} />
             <Button type="submit" className="col-span-2 md:col-span-5">
-              Add shift
+              {t("addShiftButton")}
             </Button>
           </form>
         </Card>
@@ -98,7 +107,7 @@ export default async function StaffPage({
           return (
             <Card key={key} className={isToday(day) ? "ring-2 ring-emerald-600" : ""}>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">
-                {format(day, "EEE d")}
+                {format(day, "EEE d", { locale: dateLocale })}
               </p>
               {dayShifts.length === 0 ? (
                 <p className="text-xs text-stone-400">—</p>
@@ -119,7 +128,7 @@ export default async function StaffPage({
                         <form action={deleteShift} className="mt-1">
                           <input type="hidden" name="id" value={shift.id} />
                           <button className="text-red-500 hover:underline" type="submit">
-                            Remove
+                            {tCommon("remove")}
                           </button>
                         </form>
                       )}
@@ -134,7 +143,7 @@ export default async function StaffPage({
 
       {shifts.length === 0 && (
         <div className="mt-4">
-          <EmptyState message="No shifts scheduled this week." />
+          <EmptyState message={t("noShiftsThisWeek")} />
         </div>
       )}
     </div>

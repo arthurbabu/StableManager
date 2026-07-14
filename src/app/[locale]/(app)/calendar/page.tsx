@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import {
   addDays,
   addWeeks,
@@ -11,8 +11,10 @@ import {
   startOfDay,
   startOfWeek,
 } from "date-fns";
+import { getLocale, getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser, canManage } from "@/lib/auth-helpers";
+import { getDateFnsLocale } from "@/i18n/dateLocale";
 import { Card, PageHeader, LinkButton } from "@/components/ui";
 
 const START_HOUR = 6;
@@ -112,6 +114,11 @@ export default async function CalendarPage({
   const user = await requireUser();
   const isManager = canManage(user.role);
   const params = await searchParams;
+  const t = await getTranslations("Calendar");
+  const tTaskTypes = await getTranslations("TaskTypes");
+  const tStatus = await getTranslations("VacationStatus");
+  const locale = await getLocale();
+  const dateLocale = getDateFnsLocale(locale);
 
   const anchor = params.week ? new Date(params.week) : new Date();
   const weekStart = startOfWeek(anchor, { weekStartsOn: 1 });
@@ -149,7 +156,7 @@ export default async function CalendarPage({
   for (const s of shifts) shiftsByDay.get(dayKey(s.date))?.push(s);
 
   const tasksByDay = new Map(days.map((d) => [dayKey(d), [] as typeof careTasks]));
-  for (const t of careTasks) tasksByDay.get(dayKey(t.date))?.push(t);
+  for (const task of careTasks) tasksByDay.get(dayKey(task.date))?.push(task);
 
   const vacationsByDay = new Map(days.map((d) => [dayKey(d), [] as typeof vacations]));
   for (const day of days) {
@@ -178,41 +185,44 @@ export default async function CalendarPage({
   return (
     <div>
       <PageHeader
-        title="Calendar"
-        subtitle={`${format(weekStart, "MMM d")} – ${format(weekEnd, "MMM d, yyyy")}`}
+        title={t("title")}
+        subtitle={t("dateRange", {
+          start: format(weekStart, "d MMM", { locale: dateLocale }),
+          end: format(weekEnd, "d MMM yyyy", { locale: dateLocale }),
+        })}
         action={
           <div className="flex gap-2">
             <LinkButton href={`/calendar?week=${prevWeek}`} variant="secondary">
-              ← Prev
+              {t("prev")}
             </LinkButton>
             <LinkButton href="/calendar" variant="secondary">
-              Today
+              {t("today")}
             </LinkButton>
             <LinkButton href={`/calendar?week=${nextWeek}`} variant="secondary">
-              Next →
+              {t("next")}
             </LinkButton>
           </div>
         }
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-stone-500 dark:text-stone-400">
-        <Legend color="var(--cal-shift)" label="Shift" />
-        <Legend color="var(--cal-task)" label="Care task" />
-        <Legend color="var(--cal-vacation)" label="Vacation" />
-        <Legend color="var(--cal-competition)" label="Competition" />
+        <Legend color="var(--cal-shift)" label={t("legendShift")} />
+        <Legend color="var(--cal-task)" label={t("legendTask")} />
+        <Legend color="var(--cal-vacation)" label={t("legendVacation")} />
+        <Legend color="var(--cal-competition)" label={t("legendCompetition")} />
         {isManager && (
           <div className="ml-auto flex flex-wrap gap-2">
             <LinkButton href="/staff" variant="secondary" className="px-2 py-1 text-xs">
-              + Shift
+              {t("addShift")}
             </LinkButton>
             <LinkButton href="/staff/vacations" variant="secondary" className="px-2 py-1 text-xs">
-              + Vacation
+              {t("addVacation")}
             </LinkButton>
             <LinkButton href="/horses" variant="secondary" className="px-2 py-1 text-xs">
-              + Care task
+              {t("addTask")}
             </LinkButton>
             <LinkButton href="/competitions" variant="secondary" className="px-2 py-1 text-xs">
-              + Competition
+              {t("addCompetition")}
             </LinkButton>
           </div>
         )}
@@ -230,14 +240,16 @@ export default async function CalendarPage({
                   isToday(day) ? "text-emerald-700 dark:text-emerald-400" : "text-stone-700 dark:text-stone-200"
                 }`}
               >
-                <p className="text-xs font-semibold uppercase tracking-wide">{format(day, "EEE")}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide">
+                  {format(day, "EEE", { locale: dateLocale })}
+                </p>
                 <p className="text-lg font-semibold">{format(day, "d")}</p>
               </div>
             ))}
 
             {/* All-day / untimed events */}
             <div className="border-b border-stone-200 py-2 pr-2 text-right text-[11px] text-stone-400 dark:border-neutral-800">
-              All day
+              {t("allDay")}
             </div>
             {days.map((day) => {
               const key = dayKey(day);
@@ -252,7 +264,7 @@ export default async function CalendarPage({
                   {dayVacations.map((v) => (
                     <div
                       key={v.id}
-                      title={`${v.user.name} — vacation (${v.status.toLowerCase()})`}
+                      title={`${v.user.name} — ${t("legendVacation")} (${tStatus(v.status)})`}
                       className={`truncate rounded px-1.5 py-0.5 text-[11px] font-medium text-white ${
                         v.status === "PENDING" ? "border border-dashed border-white/70 opacity-70" : ""
                       }`}
@@ -272,17 +284,17 @@ export default async function CalendarPage({
                       {c.name}
                     </Link>
                   ))}
-                  {dayTasks.map((t) => (
+                  {dayTasks.map((task) => (
                     <Link
-                      key={t.id}
-                      href={`/horses/${t.horseId}`}
-                      title={`${t.horse.name} — ${t.type}${t.assignedTo ? ` (${t.assignedTo.name})` : ""}`}
+                      key={task.id}
+                      href={`/horses/${task.horseId}`}
+                      title={`${task.horse.name} — ${tTaskTypes(task.type)}${task.assignedTo ? ` (${task.assignedTo.name})` : ""}`}
                       className={`block truncate rounded px-1.5 py-0.5 text-[11px] font-medium text-white ${
-                        t.done ? "opacity-40 line-through" : ""
+                        task.done ? "opacity-40 line-through" : ""
                       }`}
                       style={{ backgroundColor: "var(--cal-task)" }}
                     >
-                      {t.horse.name} · {t.type.toLowerCase()}
+                      {task.horse.name} · {tTaskTypes(task.type)}
                     </Link>
                   ))}
                 </div>
@@ -354,9 +366,7 @@ export default async function CalendarPage({
       </Card>
 
       {!days.some((d) => isSameDay(d, now)) && (
-        <p className="mt-3 text-xs text-stone-400">
-          Viewing a different week than today — the time-of-day indicator only shows on the current week.
-        </p>
+        <p className="mt-3 text-xs text-stone-400">{t("otherWeekNotice")}</p>
       )}
     </div>
   );

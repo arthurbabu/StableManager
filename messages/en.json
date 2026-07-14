@@ -1,0 +1,188 @@
+{
+  "Metadata": {
+    "title": "Stable Manager",
+    "description": "Staff planning, vacations, competitions and horses planning for your stable."
+  },
+  "Common": {
+    "name": "Name",
+    "notes": "Notes",
+    "notesOptional": "Notes (optional)",
+    "location": "Location",
+    "email": "Email",
+    "password": "Password",
+    "save": "Save",
+    "saveChanges": "Save changes",
+    "remove": "Remove",
+    "cancel": "Cancel",
+    "add": "Add",
+    "update": "Update",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "signOut": "Sign out"
+  },
+  "Roles": {
+    "ADMIN": "Admin",
+    "MANAGER": "Manager",
+    "STAFF": "Staff"
+  },
+  "TaskTypes": {
+    "FEEDING": "Feeding",
+    "GROOMING": "Grooming",
+    "TRAINING": "Training",
+    "FARRIER": "Farrier",
+    "VET": "Vet",
+    "TURNOUT": "Turnout",
+    "OTHER": "Other"
+  },
+  "HorseSex": {
+    "MARE": "Mare",
+    "GELDING": "Gelding",
+    "STALLION": "Stallion"
+  },
+  "VacationStatus": {
+    "PENDING": "Pending",
+    "APPROVED": "Approved",
+    "REJECTED": "Rejected"
+  },
+  "Nav": {
+    "dashboard": "Dashboard",
+    "calendar": "Calendar",
+    "staff": "Staff",
+    "horses": "Horses",
+    "competitions": "Events",
+    "staffAccounts": "Staff Accounts",
+    "appName": "Stable Manager"
+  },
+  "LanguageSwitcher": {
+    "label": "Language"
+  },
+  "Login": {
+    "title": "Stable Manager",
+    "subtitle": "Staff, horses & competitions in one place",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "invalidCredentials": "Invalid email or password.",
+    "demoHint": "Demo: admin@stable.test / password123"
+  },
+  "Dashboard": {
+    "welcome": "Welcome, {name}",
+    "todaysShifts": "Today's shifts",
+    "noShiftsToday": "No shifts scheduled for today.",
+    "viewFullSchedule": "View full schedule →",
+    "yourTasksToday": "Your tasks today",
+    "noTasksToday": "Nothing assigned to you today.",
+    "viewHorses": "View horses →",
+    "vacationsAwaitingReview": "Vacation requests awaiting review",
+    "noPendingRequests": "No pending requests.",
+    "reviewRequests": "Review requests →",
+    "whosOffSoon": "Who's off soon",
+    "noUpcomingVacations": "No upcoming approved vacations.",
+    "upcomingCompetitions": "Upcoming competitions",
+    "noCompetitions": "No competitions scheduled.",
+    "entries": "{count, plural, one {# entry} other {# entries}}",
+    "viewAllCompetitions": "View all competitions →"
+  },
+  "Staff": {
+    "title": "Staff schedule",
+    "dateRange": "{start} – {end}",
+    "prev": "← Prev",
+    "next": "Next →",
+    "vacations": "Vacations",
+    "addShift": "Add a shift",
+    "staffMember": "Staff member",
+    "addShiftButton": "Add shift",
+    "noShiftsThisWeek": "No shifts scheduled this week."
+  },
+  "Vacations": {
+    "title": "Vacation requests",
+    "subtitleManager": "Review and manage time-off for the whole team",
+    "subtitleStaff": "Request and track your time off",
+    "requestTimeOff": "Request time off",
+    "reasonOptional": "Reason (optional)",
+    "submitRequest": "Submit request",
+    "noRequests": "No vacation requests yet.",
+    "reviewedBy": "Reviewed by {name}",
+    "approve": "Approve",
+    "reject": "Reject"
+  },
+  "Horses": {
+    "title": "Horses",
+    "activeCount": "{count, plural, one {# active} other {# active}}",
+    "addHorse": "Add a horse",
+    "breed": "Breed",
+    "color": "Color",
+    "sexOptional": "Sex (optional)",
+    "dateOfBirth": "Date of birth",
+    "addHorseButton": "Add horse",
+    "noHorses": "No horses yet.",
+    "inactive": "Inactive",
+    "openTasks": "{count, plural, one {# open task} other {# open tasks}}"
+  },
+  "HorseDetail": {
+    "markInactive": "Mark inactive",
+    "markActive": "Mark active",
+    "profile": "Profile",
+    "sex": "Sex",
+    "unspecified": "Unspecified",
+    "addCareTask": "Add a care task",
+    "taskType": "Task type",
+    "unassigned": "Unassigned",
+    "addTaskButton": "Add task",
+    "careSchedule": "Care schedule",
+    "noTasks": "No care tasks yet.",
+    "markDone": "Mark done",
+    "markNotDone": "Mark not done"
+  },
+  "Competitions": {
+    "title": "Competitions",
+    "upcomingCount": "{count, plural, one {# upcoming} other {# upcoming}}",
+    "addCompetition": "Add a competition",
+    "endDateOptional": "End date (optional)",
+    "addCompetitionButton": "Add competition",
+    "upcoming": "Upcoming",
+    "noUpcoming": "No upcoming competitions.",
+    "past": "Past",
+    "entries": "{count, plural, one {# entry} other {# entries}}"
+  },
+  "CompetitionDetail": {
+    "deleteCompetition": "Delete competition",
+    "addEntry": "Add an entry",
+    "horse": "Horse",
+    "riderOptional": "Rider (optional)",
+    "categoryClass": "Category / class",
+    "addEntryButton": "Add entry",
+    "entries": "Entries",
+    "noEntries": "No entries yet.",
+    "rider": "Rider",
+    "category": "Category",
+    "result": "Result",
+    "resultPlaceholder": "e.g. 1st place"
+  },
+  "Admin": {
+    "title": "Staff accounts",
+    "subtitle": "Create logins and manage roles",
+    "createAccount": "Create a staff account",
+    "fullName": "Full name",
+    "passwordHint": "Password (8+ chars)",
+    "createAccountButton": "Create account",
+    "team": "Team"
+  },
+  "Calendar": {
+    "title": "Calendar",
+    "dateRange": "{start} – {end}",
+    "prev": "← Prev",
+    "today": "Today",
+    "next": "Next →",
+    "legendShift": "Shift",
+    "legendTask": "Care task",
+    "legendVacation": "Vacation",
+    "legendCompetition": "Competition",
+    "addShift": "+ Shift",
+    "addVacation": "+ Vacation",
+    "addTask": "+ Care task",
+    "addCompetition": "+ Competition",
+    "allDay": "All day",
+    "otherWeekNotice": "Viewing a different week than today — the time-of-day indicator only shows on the current week."
+  }
+}

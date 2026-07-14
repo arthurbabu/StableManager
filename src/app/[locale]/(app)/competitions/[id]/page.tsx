@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
+import { getLocale, getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser, canManage } from "@/lib/auth-helpers";
+import { getDateFnsLocale } from "@/i18n/dateLocale";
 import { Card, PageHeader, EmptyState, Button, Input, Select } from "@/components/ui";
 import { addEntry, updateEntryResult, removeEntry, deleteCompetition } from "../actions";
 
@@ -13,6 +15,10 @@ export default async function CompetitionDetailPage({
   const user = await requireUser();
   const isManager = canManage(user.role);
   const { id } = await params;
+  const t = await getTranslations("CompetitionDetail");
+  const tCommon = await getTranslations("Common");
+  const locale = await getLocale();
+  const dateLocale = getDateFnsLocale(locale);
 
   const [competition, horses, riders] = await Promise.all([
     prisma.competition.findUnique({
@@ -34,8 +40,8 @@ export default async function CompetitionDetailPage({
       <PageHeader
         title={competition.name}
         subtitle={[
-          format(competition.startDate, "MMM d, yyyy"),
-          competition.endDate ? `– ${format(competition.endDate, "MMM d, yyyy")}` : null,
+          format(competition.startDate, "d MMM yyyy", { locale: dateLocale }),
+          competition.endDate ? `– ${format(competition.endDate, "d MMM yyyy", { locale: dateLocale })}` : null,
           competition.location,
         ]
           .filter(Boolean)
@@ -45,7 +51,7 @@ export default async function CompetitionDetailPage({
             <form action={deleteCompetition}>
               <input type="hidden" name="id" value={competition.id} />
               <Button type="submit" variant="danger">
-                Delete competition
+                {t("deleteCompetition")}
               </Button>
             </form>
           )
@@ -60,12 +66,12 @@ export default async function CompetitionDetailPage({
 
       {isManager && (
         <Card className="mb-6">
-          <h2 className="mb-3 font-medium text-stone-900 dark:text-stone-50">Add an entry</h2>
+          <h2 className="mb-3 font-medium text-stone-900 dark:text-stone-50">{t("addEntry")}</h2>
           <form action={addEntry} className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <input type="hidden" name="competitionId" value={competition.id} />
             <Select name="horseId" required defaultValue="">
               <option value="" disabled>
-                Horse
+                {t("horse")}
               </option>
               {horses.map((h) => (
                 <option key={h.id} value={h.id}>
@@ -74,32 +80,32 @@ export default async function CompetitionDetailPage({
               ))}
             </Select>
             <Select name="riderId" defaultValue="">
-              <option value="">Rider (optional)</option>
+              <option value="">{t("riderOptional")}</option>
               {riders.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name}
                 </option>
               ))}
             </Select>
-            <Input type="text" name="category" placeholder="Category / class" />
-            <Button type="submit">Add entry</Button>
+            <Input type="text" name="category" placeholder={t("categoryClass")} />
+            <Button type="submit">{t("addEntryButton")}</Button>
           </form>
         </Card>
       )}
 
       <Card>
-        <h2 className="mb-3 font-medium text-stone-900 dark:text-stone-50">Entries</h2>
+        <h2 className="mb-3 font-medium text-stone-900 dark:text-stone-50">{t("entries")}</h2>
         {competition.entries.length === 0 ? (
-          <EmptyState message="No entries yet." />
+          <EmptyState message={t("noEntries")} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-stone-200 text-stone-400 dark:border-neutral-800">
-                  <th className="py-2 pr-4 font-medium">Horse</th>
-                  <th className="py-2 pr-4 font-medium">Rider</th>
-                  <th className="py-2 pr-4 font-medium">Category</th>
-                  <th className="py-2 pr-4 font-medium">Result</th>
+                  <th className="py-2 pr-4 font-medium">{t("horse")}</th>
+                  <th className="py-2 pr-4 font-medium">{t("rider")}</th>
+                  <th className="py-2 pr-4 font-medium">{t("category")}</th>
+                  <th className="py-2 pr-4 font-medium">{t("result")}</th>
                   {isManager && <th className="py-2 font-medium"></th>}
                 </tr>
               </thead>
@@ -124,11 +130,11 @@ export default async function CompetitionDetailPage({
                             type="text"
                             name="result"
                             defaultValue={entry.result ?? ""}
-                            placeholder="e.g. 1st place"
+                            placeholder={t("resultPlaceholder")}
                             className="w-36 py-1"
                           />
                           <Button type="submit" variant="secondary" className="px-2 py-1 text-xs">
-                            Save
+                            {tCommon("save")}
                           </Button>
                         </form>
                       ) : (
@@ -141,7 +147,7 @@ export default async function CompetitionDetailPage({
                           <input type="hidden" name="id" value={entry.id} />
                           <input type="hidden" name="competitionId" value={competition.id} />
                           <button className="text-red-500 hover:underline" type="submit">
-                            Remove
+                            {tCommon("remove")}
                           </button>
                         </form>
                       </td>
