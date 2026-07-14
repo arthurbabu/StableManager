@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  STAFF
+}
+
+enum VacationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum HorseSex {
+  MARE
+  GELDING
+  STALLION
+}
+
+enum TaskType {
+  FEEDING
+  GROOMING
+  TRAINING
+  FARRIER
+  VET
+  TURNOUT
+  OTHER
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(STAFF)
+  phone        String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  shifts             Shift[]
+  vacationRequests   VacationRequest[]        @relation("VacationRequester")
+  reviewedVacations  VacationRequest[]        @relation("VacationReviewer")
+  careTasks          CareTask[]
+  competitionEntries CompetitionEntry[]
+}
+
+model Shift {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime
+  startTime String
+  endTime   String
+  notes     String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([date])
+  @@index([userId])
+}
+
+model VacationRequest {
+  id         String         @id @default(cuid())
+  userId     String
+  startDate  DateTime
+  endDate    DateTime
+  reason     String?
+  status     VacationStatus @default(PENDING)
+  reviewedById String?
+  reviewNote String?
+  createdAt  DateTime       @default(now())
+
+  user       User  @relation("VacationRequester", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy User? @relation("VacationReviewer", fields: [reviewedById], references: [id])
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Horse {
+  id          String    @id @default(cuid())
+  name        String
+  breed       String?
+  color       String?
+  sex         HorseSex?
+  dateOfBirth DateTime?
+  notes       String?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  careTasks          CareTask[]
+  competitionEntries CompetitionEntry[]
+}
+
+model CareTask {
+  id           String   @id @default(cuid())
+  horseId      String
+  type         TaskType
+  date         DateTime
+  assignedToId String?
+  notes        String?
+  done         Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  horse      Horse @relation(fields: [horseId], references: [id], onDelete: Cascade)
+  assignedTo User? @relation(fields: [assignedToId], references: [id])
+
+  @@index([date])
+  @@index([horseId])
+}
+
+model Competition {
+  id        String    @id @default(cuid())
+  name      String
+  location  String?
+  startDate DateTime
+  endDate   DateTime?
+  notes     String?
+  createdAt DateTime  @default(now())
+
+  entries CompetitionEntry[]
+
+  @@index([startDate])
+}
+
+model CompetitionEntry {
+  id            String  @id @default(cuid())
+  competitionId String
+  horseId       String
+  riderId       String?
+  category      String?
+  result        String?
+  notes         String?
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  horse       Horse       @relation(fields: [horseId], references: [id], onDelete: Cascade)
+  rider       User?       @relation(fields: [riderId], references: [id])
+
+  @@index([competitionId])
+  @@index([horseId])
+}
