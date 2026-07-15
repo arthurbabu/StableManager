@@ -44,11 +44,12 @@ openssl rand -base64 32
 | Email | Password | Role |
 |---|---|---|
 | admin@stable.test | password123 | ADMIN |
-| manager@stable.test | password123 | MANAGER |
 | jamie@stable.test | password123 | STAFF |
 | taylor@stable.test | password123 | STAFF |
 
 Change these passwords (or deactivate the accounts) before using this with real data.
+The MANAGER role still exists in the app (see Roles above) — promote any account to it
+from Staff Accounts if you need that tier; the seed data just doesn't create one by default.
 
 ## Language
 

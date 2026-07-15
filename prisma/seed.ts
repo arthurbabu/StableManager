@@ -18,17 +18,6 @@ async function main() {
     },
   });
 
-  const manager = await prisma.user.upsert({
-    where: { email: "manager@stable.test" },
-    update: {},
-    create: {
-      name: "Sam Rivera",
-      email: "manager@stable.test",
-      passwordHash,
-      role: "MANAGER",
-    },
-  });
-
   const groom1 = await prisma.user.upsert({
     where: { email: "jamie@stable.test" },
     update: {},
@@ -78,7 +67,7 @@ async function main() {
   today.setHours(0, 0, 0, 0);
 
   // Shifts for this week
-  const staffRotation = [admin, manager, groom1, groom2];
+  const staffRotation = [admin, groom1, groom2];
   for (let i = -1; i < 6; i++) {
     const date = addDays(today, i);
     const person = staffRotation[(i + staffRotation.length) % staffRotation.length];
@@ -95,7 +84,7 @@ async function main() {
 
   // A couple of overlapping shifts today, to show side-by-side layout on the calendar
   await prisma.shift.create({
-    data: { userId: manager.id, date: today, startTime: "12:00", endTime: "20:00", notes: "Evening cover" },
+    data: { userId: groom2.id, date: today, startTime: "12:00", endTime: "20:00", notes: "Evening cover" },
   });
   await prisma.shift.create({
     data: { userId: groom1.id, date: today, startTime: "13:00", endTime: "17:00" },
@@ -118,7 +107,7 @@ async function main() {
       endDate: addDays(today, 5),
       reason: "Long weekend",
       status: "APPROVED",
-      reviewedById: manager.id,
+      reviewedById: admin.id,
     },
   });
 
@@ -188,7 +177,7 @@ async function main() {
       {
         competitionId: springShow.id,
         horseId: horses[1].id,
-        riderId: manager.id,
+        riderId: admin.id,
         category: "1.10m Jumping",
         result: "2nd place",
       },
@@ -198,7 +187,6 @@ async function main() {
   console.log("Seed complete.");
   console.log("Login with any of:");
   console.log("  admin@stable.test / password123 (ADMIN)");
-  console.log("  manager@stable.test / password123 (MANAGER)");
   console.log("  jamie@stable.test / password123 (STAFF)");
   console.log("  taylor@stable.test / password123 (STAFF)");
 }
