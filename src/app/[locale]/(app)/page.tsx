@@ -15,7 +15,7 @@ export default async function DashboardPage() {
   const todayStart = startOfDay(new Date());
   const todayEnd = endOfDay(new Date());
 
-  const [todaysShifts, myTasksToday, upcomingVacations, pendingVacations, upcomingCompetitions, vetReminders] =
+  const [todaysShifts, myTasksToday, upcomingVacations, pendingVacations, upcomingCompetitions, vetReminderCandidates] =
     await Promise.all([
       prisma.shift.findMany({
         where: { date: { gte: todayStart, lte: todayEnd } },
@@ -54,15 +54,19 @@ export default async function DashboardPage() {
         include: { entries: true },
       }),
       prisma.careTask.findMany({
-        where: {
-          type: "VET",
-          nextReminderDate: { not: null, lte: addDays(todayStart, 30) },
-        },
+        where: { type: "VET", reminderDelayDays: { not: null } },
         include: { horse: true },
-        orderBy: { nextReminderDate: "asc" },
-        take: 5,
       }),
     ]);
+
+  // reminderDelayDays is an offset from `date`, not a stored absolute date
+  // (see CareTask.reminderDelayDays), so the due date has to be computed
+  // here rather than filtered/sorted in the query itself.
+  const vetReminders = vetReminderCandidates
+    .map((task) => ({ task, dueDate: addDays(task.date, task.reminderDelayDays!) }))
+    .filter(({ dueDate }) => dueDate <= addDays(todayStart, 30))
+    .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())
+    .slice(0, 5);
 
   return (
     <div>
@@ -200,8 +204,8 @@ export default async function DashboardPage() {
             <EmptyState message={t("noVetReminders")} />
           ) : (
             <ul className="space-y-2">
-              {vetReminders.map((task) => {
-                const overdue = task.nextReminderDate && task.nextReminderDate < todayStart;
+              {vetReminders.map(({ task, dueDate }) => {
+                const overdue = dueDate < todayStart;
                 return (
                   <li key={task.id}>
                     <Link
@@ -212,7 +216,7 @@ export default async function DashboardPage() {
                         {task.horse.name}
                       </span>
                       <span className={overdue ? "font-medium text-red-600 dark:text-red-400" : "text-stone-500 dark:text-stone-400"}>
-                        {task.nextReminderDate && format(task.nextReminderDate, "d MMM yyyy", { locale: dateLocale })}
+                        {format(dueDate, "d MMM yyyy", { locale: dateLocale })}
                       </span>
                     </Link>
                   </li>

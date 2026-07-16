@@ -28,7 +28,7 @@ export default async function CalendarPage({
   const weekEnd = endOfWeek(anchor, { weekStartsOn: 1 });
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
-  const [shifts, careTasks, vacations, competitions, staff, horses] = await Promise.all([
+  const [shifts, careTasks, vacations, competitions, staff, horses, reminderSources] = await Promise.all([
     prisma.shift.findMany({
       where: { date: { gte: weekStart, lte: weekEnd } },
       include: { user: true },
@@ -55,6 +55,14 @@ export default async function CalendarPage({
     }),
     prisma.user.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
     prisma.horse.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    // reminderDelayDays is an offset from a source task's own `date`, which
+    // could be from any point in the past, so this can't be bounded by the
+    // visible week the way the other queries are — the due date only gets
+    // computed (and matched against the week) below.
+    prisma.careTask.findMany({
+      where: { type: "VET", reminderDelayDays: { not: null } },
+      include: { horse: true, assignedTo: true },
+    }),
   ]);
 
   const shiftsByDay: Record<string, typeof shifts> = {};
@@ -81,6 +89,41 @@ export default async function CalendarPage({
         competitionsByDay[dayKey(day)]?.push(c);
       }
     }
+  }
+
+  const suggestionsByDay: Record<
+    string,
+    {
+      key: string;
+      horseId: string;
+      horseName: string;
+      type: (typeof reminderSources)[number]["type"];
+      assignedToId: string | null;
+      notes: string | null;
+    }[]
+  > = {};
+  for (const d of days) suggestionsByDay[dayKey(d)] = [];
+
+  for (const source of reminderSources) {
+    if (source.reminderDelayDays == null) continue;
+    const dueKey = dayKey(addDays(source.date, source.reminderDelayDays));
+    if (!(dueKey in suggestionsByDay)) continue; // due date outside the visible week
+
+    // Skip if a real task of the same type already exists for this horse on
+    // the due date — the reminder's already been acted on.
+    const alreadyFulfilled = careTasks.some(
+      (t) => t.horseId === source.horseId && t.type === source.type && dayKey(t.date) === dueKey,
+    );
+    if (alreadyFulfilled) continue;
+
+    suggestionsByDay[dueKey].push({
+      key: source.id,
+      horseId: source.horseId,
+      horseName: source.horse.name,
+      type: source.type,
+      assignedToId: source.assignedToId,
+      notes: source.notes,
+    });
   }
 
   const prevWeek = format(addWeeks(weekStart, -1), "yyyy-MM-dd");
@@ -117,6 +160,7 @@ export default async function CalendarPage({
         tasksByDay={tasksByDay}
         vacationsByDay={vacationsByDay}
         competitionsByDay={competitionsByDay}
+        suggestionsByDay={suggestionsByDay}
         staff={staff}
         horses={horses}
         isManager={isManager}

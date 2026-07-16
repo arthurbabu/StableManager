@@ -12,6 +12,13 @@ function parseOptionalDate(value: FormDataEntryValue | null) {
   return str ? new Date(str) : null;
 }
 
+function parseOptionalInt(value: FormDataEntryValue | null) {
+  const str = String(value ?? "").trim();
+  if (!str) return null;
+  const n = Number.parseInt(str, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
 export async function createHorse(formData: FormData) {
   await requireRole(["ADMIN", "MANAGER"]);
 
@@ -96,7 +103,7 @@ export async function createCareTask(formData: FormData) {
   const assignedToId = String(formData.get("assignedToId") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
   const location = String(formData.get("location") ?? "").trim() || null;
-  const nextReminderDate = parseOptionalDate(formData.get("nextReminderDate"));
+  const reminderDelayDays = parseOptionalInt(formData.get("reminderDelayDays"));
 
   if (!horseId || !type || !date) {
     throw new Error("Task type and date are required.");
@@ -112,7 +119,7 @@ export async function createCareTask(formData: FormData) {
       assignedToId,
       notes,
       location,
-      nextReminderDate,
+      reminderDelayDays,
     },
   });
 
@@ -133,7 +140,7 @@ export async function updateCareTask(formData: FormData) {
   const assignedToId = String(formData.get("assignedToId") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
   const location = String(formData.get("location") ?? "").trim() || null;
-  const nextReminderDate = parseOptionalDate(formData.get("nextReminderDate"));
+  const reminderDelayDays = parseOptionalInt(formData.get("reminderDelayDays"));
 
   if (!id || !horseId || !type || !date) {
     throw new Error("Task type and date are required.");
@@ -150,7 +157,7 @@ export async function updateCareTask(formData: FormData) {
       assignedToId,
       notes,
       location,
-      nextReminderDate,
+      reminderDelayDays,
     },
   });
 

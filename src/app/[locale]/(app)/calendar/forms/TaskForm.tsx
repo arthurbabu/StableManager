@@ -18,7 +18,15 @@ type ExistingTask = {
   assignedToId: string | null;
   notes: string | null;
   location: string | null;
-  nextReminderDate: string | null; // yyyy-MM-dd
+  reminderDelayDays: number | null;
+};
+
+/** Defaults for a fresh task suggested from a prior reminder — not an edit. */
+type TaskPrefill = {
+  horseId: string;
+  type: TaskType;
+  assignedToId: string | null;
+  notes: string | null;
 };
 
 export function TaskForm({
@@ -26,6 +34,7 @@ export function TaskForm({
   startTime,
   endTime,
   task,
+  prefill,
   horses,
   staff,
   onDone,
@@ -34,6 +43,7 @@ export function TaskForm({
   startTime?: string;
   endTime?: string;
   task?: ExistingTask;
+  prefill?: TaskPrefill;
   horses: { id: string; name: string }[];
   staff: { id: string; name: string }[];
   onDone: () => void;
@@ -44,7 +54,7 @@ export function TaskForm({
   const tCompetitionDetail = useTranslations("CompetitionDetail");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [type, setType] = useState<TaskType | "">(task?.type ?? "");
+  const [type, setType] = useState<TaskType | "">(task?.type ?? prefill?.type ?? "");
   const isEdit = !!task;
   const showLocation = LOCATION_TASK_TYPES.includes(type as (typeof LOCATION_TASK_TYPES)[number]);
   const showReminder = type === "VET";
@@ -82,7 +92,7 @@ export function TaskForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      <Select name="horseId" required defaultValue={task?.horseId ?? ""}>
+      <Select name="horseId" required defaultValue={task?.horseId ?? prefill?.horseId ?? ""}>
         <option value="" disabled>
           {tCompetitionDetail("horse")}
         </option>
@@ -107,7 +117,7 @@ export function TaskForm({
         <Input type="time" name="startTime" defaultValue={task?.startTime ?? startTime ?? ""} />
         <Input type="time" name="endTime" defaultValue={task?.endTime ?? endTime ?? ""} />
       </div>
-      <Select name="assignedToId" defaultValue={task?.assignedToId ?? ""}>
+      <Select name="assignedToId" defaultValue={task?.assignedToId ?? prefill?.assignedToId ?? ""}>
         <option value="">{t("unassigned")}</option>
         {staff.map((s) => (
           <option key={s.id} value={s.id}>
@@ -125,11 +135,17 @@ export function TaskForm({
       )}
       {showReminder && (
         <div>
-          <label className="mb-1 block text-xs text-stone-500 dark:text-stone-400">{t("nextReminderDate")}</label>
-          <Input type="date" name="nextReminderDate" defaultValue={task?.nextReminderDate ?? ""} />
+          <label className="mb-1 block text-xs text-stone-500 dark:text-stone-400">{t("reminderDelayDays")}</label>
+          <Input
+            type="number"
+            name="reminderDelayDays"
+            min={1}
+            placeholder={t("reminderDelayDaysPlaceholder")}
+            defaultValue={task?.reminderDelayDays ?? ""}
+          />
         </div>
       )}
-      <Input type="text" name="notes" placeholder={tCommon("notes")} defaultValue={task?.notes ?? ""} />
+      <Input type="text" name="notes" placeholder={tCommon("notes")} defaultValue={task?.notes ?? prefill?.notes ?? ""} />
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       <div className="flex gap-2">
         {isEdit && (

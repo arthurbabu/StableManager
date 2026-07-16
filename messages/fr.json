@@ -147,10 +147,10 @@
     "markNotDone": "Marquer comme non fait",
     "provenanceAddress": "Adresse de provenance",
     "destinationAddress": "Adresse de destination",
-    "nextReminderDate": "Prochain rappel (vaccination)",
-    "nextReminderDateShort": "Prochain rappel vaccination",
     "nextReminderLabel": "Prochain rappel : {date}",
-    "locationOptional": "Adresse de provenance/destination (optionnel)"
+    "locationOptional": "Adresse de provenance/destination (optionnel)",
+    "reminderDelayDays": "Rappel dans (jours)",
+    "reminderDelayDaysPlaceholder": "ex. 365"
   },
   "Competitions": {
     "title": "Concours",
@@ -205,7 +205,8 @@
     "allStaff": "Tout le personnel",
     "allCategories": "Toutes les catégories",
     "editShift": "Modifier le service",
-    "editTask": "Modifier la tâche"
+    "editTask": "Modifier la tâche",
+    "reminderSuggestion": "Rappel suggéré — cliquer pour créer la tâche"
   },
   "Register": {
     "title": "Registre d'élevage",

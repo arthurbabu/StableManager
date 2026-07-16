@@ -147,10 +147,10 @@
     "markNotDone": "Mark not done",
     "provenanceAddress": "Origin address",
     "destinationAddress": "Destination address",
-    "nextReminderDate": "Next reminder (vaccination)",
-    "nextReminderDateShort": "Next vaccination reminder",
     "nextReminderLabel": "Next reminder: {date}",
-    "locationOptional": "Origin/destination address (optional)"
+    "locationOptional": "Origin/destination address (optional)",
+    "reminderDelayDays": "Reminder in (days)",
+    "reminderDelayDaysPlaceholder": "e.g. 365"
   },
   "Competitions": {
     "title": "Competitions",
@@ -205,7 +205,8 @@
     "allStaff": "All staff",
     "allCategories": "All categories",
     "editShift": "Edit shift",
-    "editTask": "Edit task"
+    "editTask": "Edit task",
+    "reminderSuggestion": "Suggested reminder — click to create the task"
   },
   "Register": {
     "title": "Breeding register",

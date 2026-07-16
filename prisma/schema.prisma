@@ -117,8 +117,9 @@ model CareTask {
   notes            String?
   done             Boolean   @default(false)
   createdAt        DateTime  @default(now())
-  location         String? // ENTRY: provenance address · EXIT: destination address
-  nextReminderDate DateTime? // VET: next vaccination/reminder due date
+  location          String? // ENTRY: provenance address · EXIT: destination address
+  reminderDelayDays Int? // VET: days after `date` when a follow-up is due — stored as
+  // an offset (not an absolute date) so it stays correct if `date` is later edited
 
   horse      Horse @relation(fields: [horseId], references: [id], onDelete: Cascade)
   assignedTo User? @relation(fields: [assignedToId], references: [id])

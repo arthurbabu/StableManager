@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { format } from "date-fns";
+import { addDays, format } from "date-fns";
 import { getLocale, getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser, canManage } from "@/lib/auth-helpers";
@@ -200,8 +200,14 @@ export default async function HorseDetailPage({
                 <Input type="text" name="notes" placeholder={tCommon("notes")} />
                 <Input type="text" name="location" placeholder={t("locationOptional")} className="col-span-2" />
                 <div className="col-span-2">
-                  <Label htmlFor="nextReminderDate">{t("nextReminderDateShort")}</Label>
-                  <Input id="nextReminderDate" type="date" name="nextReminderDate" />
+                  <Label htmlFor="reminderDelayDays">{t("reminderDelayDays")}</Label>
+                  <Input
+                    id="reminderDelayDays"
+                    type="number"
+                    name="reminderDelayDays"
+                    min={1}
+                    placeholder={t("reminderDelayDaysPlaceholder")}
+                  />
                 </div>
                 <Button type="submit" className="col-span-2 md:col-span-4">
                   {t("addTaskButton")}
@@ -220,7 +226,8 @@ export default async function HorseDetailPage({
               <ul className="space-y-2">
                 {horse.careTasks.map((task) => {
                   const canToggle = isManager || task.assignedToId === user.id;
-                  const overdueReminder = task.nextReminderDate && task.nextReminderDate <= today;
+                  const reminderDueDate = task.reminderDelayDays != null ? addDays(task.date, task.reminderDelayDays) : null;
+                  const overdueReminder = reminderDueDate && reminderDueDate <= today;
                   return (
                     <li
                       key={task.id}
@@ -263,10 +270,10 @@ export default async function HorseDetailPage({
                           )}
                           {LOCATION_TASK_TYPES.includes(task.type as (typeof LOCATION_TASK_TYPES)[number]) &&
                             task.location && <p className="text-stone-400">{task.location}</p>}
-                          {task.nextReminderDate && (
+                          {reminderDueDate && (
                             <p className={overdueReminder ? "font-medium text-red-600 dark:text-red-400" : "text-stone-400"}>
                               {t("nextReminderLabel", {
-                                date: format(task.nextReminderDate, "d MMM yyyy", { locale: dateLocale }),
+                                date: format(reminderDueDate, "d MMM yyyy", { locale: dateLocale }),
                               })}
                             </p>
                           )}

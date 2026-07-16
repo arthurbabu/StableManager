@@ -90,7 +90,7 @@ type TaskEntry = {
   assignedToId: string | null;
   notes: string | null;
   location: string | null;
-  nextReminderDate: Date | null;
+  reminderDelayDays: number | null;
   done: boolean;
   horse: { name: string };
   assignedTo: { name: string } | null;
@@ -111,6 +111,15 @@ type VacationEntry = {
 type CompetitionEntry = {
   id: string;
   name: string;
+};
+
+type ReminderSuggestion = {
+  key: string;
+  horseId: string;
+  horseName: string;
+  type: TaskType;
+  assignedToId: string | null;
+  notes: string | null;
 };
 
 type Person = { id: string; name: string };
@@ -179,8 +188,9 @@ type PanelState =
         assignedToId: string | null;
         notes: string | null;
         location: string | null;
-        nextReminderDate: string | null;
+        reminderDelayDays: number | null;
       };
+      prefill?: { horseId: string; type: TaskType; assignedToId: string | null; notes: string | null };
     }
   | { kind: "competition"; date: string }
   | { kind: "vacation"; vacation: VacationEntry };
@@ -209,7 +219,7 @@ function taskToExisting(task: TaskEntry, dayKeyStr: string) {
     assignedToId: task.assignedToId,
     notes: task.notes,
     location: task.location,
-    nextReminderDate: task.nextReminderDate ? dayKey(task.nextReminderDate) : null,
+    reminderDelayDays: task.reminderDelayDays,
   };
 }
 
@@ -228,6 +238,7 @@ export function CalendarInteractive({
   tasksByDay,
   vacationsByDay,
   competitionsByDay,
+  suggestionsByDay,
   staff,
   horses,
   isManager,
@@ -239,6 +250,7 @@ export function CalendarInteractive({
   tasksByDay: Record<string, TaskEntry[]>;
   vacationsByDay: Record<string, VacationEntry[]>;
   competitionsByDay: Record<string, CompetitionEntry[]>;
+  suggestionsByDay: Record<string, ReminderSuggestion[]>;
   staff: Person[];
   horses: Person[];
   isManager: boolean;
@@ -606,6 +618,9 @@ export function CalendarInteractive({
               const dayUntimedTasks = (tasksByDay[key] ?? []).filter(
                 (task) => !task.startTime && matchesStaff(task.assignedToId) && matchesCategory(task.type),
               );
+              const daySuggestions = (suggestionsByDay[key] ?? []).filter(
+                (s) => matchesStaff(s.assignedToId) && matchesCategory(s.type),
+              );
               return (
                 <div
                   key={`allday-${key}`}
@@ -634,6 +649,27 @@ export function CalendarInteractive({
                       style={{ borderLeftColor: "var(--cal-task)", backgroundColor: "var(--cal-task-bg)" }}
                     >
                       {task.horse.name} · {tTaskTypes(task.type)}
+                    </button>
+                  ))}
+                  {daySuggestions.map((s) => (
+                    <button
+                      key={s.key}
+                      type="button"
+                      onClick={() =>
+                        isManager &&
+                        setPanel({
+                          kind: "task",
+                          date: key,
+                          prefill: { horseId: s.horseId, type: s.type, assignedToId: s.assignedToId, notes: s.notes },
+                        })
+                      }
+                      title={`${s.horseName} — ${tTaskTypes(s.type)} (${t("reminderSuggestion")})`}
+                      className={`block w-full truncate rounded-md border-l-[3px] border-dashed px-1.5 py-0.5 text-left text-[11px] font-medium text-stone-700 opacity-80 dark:text-stone-100 ${
+                        isManager ? "cursor-pointer" : ""
+                      }`}
+                      style={{ borderLeftColor: "var(--cal-task)", backgroundColor: "var(--cal-task-bg)" }}
+                    >
+                      {s.horseName} · {tTaskTypes(s.type)} 🔔
                     </button>
                   ))}
                   {isManager && (
@@ -850,6 +886,7 @@ export function CalendarInteractive({
             startTime={panel.startTime}
             endTime={panel.endTime}
             task={panel.existing}
+            prefill={panel.prefill}
             horses={horses}
             staff={staff}
             onDone={close}
