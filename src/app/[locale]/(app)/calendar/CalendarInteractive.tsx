@@ -257,6 +257,10 @@ export function CalendarInteractive({
   const [taskDrag, setTaskDrag] = useState<TaskDragState | null>(null);
   const [isCommitting, startCommit] = useTransition();
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const taskDragRef = useRef<TaskDragState | null>(null);
+  useEffect(() => {
+    taskDragRef.current = taskDrag;
+  }, [taskDrag]);
 
   // Deliberately set only post-mount (state starts null) so the current-time
   // indicator's position is never part of the server-rendered HTML — it would
@@ -289,7 +293,6 @@ export function CalendarInteractive({
   function startTaskMove(e: React.PointerEvent<HTMLDivElement>, task: TimedTask, originKey: string) {
     if (!isManager) return;
     e.stopPropagation();
-    e.currentTarget.setPointerCapture(e.pointerId);
     const dayEl = dayRefs.current[originKey];
     const rect = dayEl?.getBoundingClientRect();
     const offsetY = rect ? Math.min(Math.max(e.clientY - rect.top, 0), GRID_HEIGHT) : 0;
@@ -311,7 +314,6 @@ export function CalendarInteractive({
   function startTaskResize(e: React.PointerEvent<HTMLDivElement>, task: TimedTask, originKey: string, edge: "start" | "end") {
     if (!isManager) return;
     e.stopPropagation();
-    e.currentTarget.setPointerCapture(e.pointerId);
     setTaskDrag({
       mode: edge === "start" ? "resize-start" : "resize-end",
       task,
@@ -326,72 +328,106 @@ export function CalendarInteractive({
     });
   }
 
-  function handleTaskDragMove(e: React.PointerEvent<HTMLDivElement>) {
+  // The dragged task block is excluded from the grid's normal layout while
+  // dragging (see the `positioned` filter below) and replaced by a live
+  // preview, which means the element that received the pointerdown can
+  // disappear mid-gesture. setPointerCapture ties event delivery to that
+  // specific element, so it would silently stop receiving move/up events the
+  // instant it unmounts — breaking the drag and, since a plain click also
+  // starts a "move" candidate, breaking click-to-edit too. Tracking via
+  // window-level listeners for the duration of the gesture sidesteps that
+  // entirely: window never unmounts, so delivery is reliable regardless of
+  // what the grid re-renders underneath the cursor.
+  useEffect(() => {
     if (!taskDrag) return;
-    e.stopPropagation();
-    const clientX = e.clientX;
-    const clientY = e.clientY;
-    setTaskDrag((prev) => {
-      if (!prev) return prev;
-      const dx = clientX - prev.pointerStartX;
-      const dy = clientY - prev.pointerStartY;
+
+    function onMove(e: PointerEvent) {
+      const prev = taskDragRef.current;
+      if (!prev) return;
+      const dx = e.clientX - prev.pointerStartX;
+      const dy = e.clientY - prev.pointerStartY;
       const moved = prev.moved || Math.abs(dx) > DRAG_CLICK_THRESHOLD_PX || Math.abs(dy) > DRAG_CLICK_THRESHOLD_PX;
 
+      let next: TaskDragState;
       if (prev.mode === "move") {
-        const overKey = dayKeyAtPoint(clientX) ?? prev.currentDayKey;
+        const overKey = dayKeyAtPoint(e.clientX) ?? prev.currentDayKey;
         const dayEl = dayRefs.current[overKey];
-        if (!dayEl) return { ...prev, moved };
-        const rect = dayEl.getBoundingClientRect();
-        const offsetY = Math.min(Math.max(clientY - rect.top, 0), GRID_HEIGHT);
-        const duration = toMinutes(prev.task.endTime) - toMinutes(prev.task.startTime);
-        const rawMin = rawMinutesFromOffset(offsetY) - prev.grabOffsetMin;
-        const snapped = Math.round(rawMin / RESIZE_SNAP_MIN) * RESIZE_SNAP_MIN;
-        const clampedStart = Math.min(Math.max(snapped, START_HOUR * 60), END_HOUR * 60 - duration);
-        return { ...prev, moved, currentDayKey: overKey, currentStartMin: clampedStart, currentEndMin: clampedStart + duration };
+        if (!dayEl) {
+          next = { ...prev, moved };
+        } else {
+          const rect = dayEl.getBoundingClientRect();
+          const offsetY = Math.min(Math.max(e.clientY - rect.top, 0), GRID_HEIGHT);
+          const duration = toMinutes(prev.task.endTime) - toMinutes(prev.task.startTime);
+          const rawMin = rawMinutesFromOffset(offsetY) - prev.grabOffsetMin;
+          const snapped = Math.round(rawMin / RESIZE_SNAP_MIN) * RESIZE_SNAP_MIN;
+          const clampedStart = Math.min(Math.max(snapped, START_HOUR * 60), END_HOUR * 60 - duration);
+          next = { ...prev, moved, currentDayKey: overKey, currentStartMin: clampedStart, currentEndMin: clampedStart + duration };
+        }
+      } else {
+        const dayEl = dayRefs.current[prev.originDayKey];
+        if (!dayEl) {
+          next = { ...prev, moved };
+        } else {
+          const rect = dayEl.getBoundingClientRect();
+          const offsetY = Math.min(Math.max(e.clientY - rect.top, 0), GRID_HEIGHT);
+          const snapped = Math.round(rawMinutesFromOffset(offsetY) / RESIZE_SNAP_MIN) * RESIZE_SNAP_MIN;
+          if (prev.mode === "resize-start") {
+            const clamped = Math.min(Math.max(snapped, START_HOUR * 60), prev.currentEndMin - RESIZE_SNAP_MIN);
+            next = { ...prev, moved, currentStartMin: clamped };
+          } else {
+            const clamped = Math.max(Math.min(snapped, END_HOUR * 60), prev.currentStartMin + RESIZE_SNAP_MIN);
+            next = { ...prev, moved, currentEndMin: clamped };
+          }
+        }
       }
-
-      const dayEl = dayRefs.current[prev.originDayKey];
-      if (!dayEl) return { ...prev, moved };
-      const rect = dayEl.getBoundingClientRect();
-      const offsetY = Math.min(Math.max(clientY - rect.top, 0), GRID_HEIGHT);
-      const snapped = Math.round(rawMinutesFromOffset(offsetY) / RESIZE_SNAP_MIN) * RESIZE_SNAP_MIN;
-      if (prev.mode === "resize-start") {
-        const clamped = Math.min(Math.max(snapped, START_HOUR * 60), prev.currentEndMin - RESIZE_SNAP_MIN);
-        return { ...prev, moved, currentStartMin: clamped };
-      }
-      const clamped = Math.max(Math.min(snapped, END_HOUR * 60), prev.currentStartMin + RESIZE_SNAP_MIN);
-      return { ...prev, moved, currentEndMin: clamped };
-    });
-  }
-
-  function handleTaskDragEnd(e: React.PointerEvent<HTMLDivElement>) {
-    if (!taskDrag) return;
-    e.stopPropagation();
-
-    if (!taskDrag.moved) {
-      setPanel({ kind: "task", date: taskDrag.originDayKey, existing: taskToExisting(taskDrag.task, dayKey(taskDrag.task.date)) });
-      setTaskDrag(null);
-      return;
+      taskDragRef.current = next;
+      setTaskDrag(next);
     }
 
-    const formData = new FormData();
-    formData.set("id", taskDrag.task.id);
-    formData.set("horseId", taskDrag.task.horseId);
-    formData.set("type", taskDrag.task.type);
-    formData.set("date", taskDrag.currentDayKey);
-    formData.set("startTime", minutesToTimeStr(taskDrag.currentStartMin));
-    formData.set("endTime", minutesToTimeStr(taskDrag.currentEndMin));
-    formData.set("assignedToId", taskDrag.task.assignedToId ?? "");
-    formData.set("notes", taskDrag.task.notes ?? "");
+    function onUp() {
+      const finalState = taskDragRef.current;
+      if (!finalState) return;
 
-    startCommit(async () => {
-      try {
-        await updateCareTask(formData);
-      } finally {
+      if (!finalState.moved) {
+        setPanel({
+          kind: "task",
+          date: finalState.originDayKey,
+          existing: taskToExisting(finalState.task, dayKey(finalState.task.date)),
+        });
         setTaskDrag(null);
+        return;
       }
-    });
-  }
+
+      const formData = new FormData();
+      formData.set("id", finalState.task.id);
+      formData.set("horseId", finalState.task.horseId);
+      formData.set("type", finalState.task.type);
+      formData.set("date", finalState.currentDayKey);
+      formData.set("startTime", minutesToTimeStr(finalState.currentStartMin));
+      formData.set("endTime", minutesToTimeStr(finalState.currentEndMin));
+      formData.set("assignedToId", finalState.task.assignedToId ?? "");
+      formData.set("notes", finalState.task.notes ?? "");
+
+      startCommit(async () => {
+        try {
+          await updateCareTask(formData);
+        } finally {
+          setTaskDrag(null);
+        }
+      });
+    }
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    // Re-subscribing only when a new gesture starts (not on every coordinate
+    // update) is intentional — see taskDragRef for how onMove/onUp still
+    // always read the latest state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskDrag?.task.id, taskDrag?.mode, taskDrag?.originDayKey]);
 
   return (
     <div>
@@ -712,8 +748,6 @@ export function CalendarInteractive({
                       <div
                         key={task.id}
                         onPointerDown={(e) => startTaskMove(e, task, key)}
-                        onPointerMove={handleTaskDragMove}
-                        onPointerUp={handleTaskDragEnd}
                         title={`${task.horse.name}: ${task.startTime}–${task.endTime} — ${tTaskTypes(task.type)}${task.assignedTo ? ` (${task.assignedTo.name})` : ""}`}
                         className={`group absolute overflow-hidden rounded-md border-l-[3px] px-1.5 py-0.5 text-[11px] text-stone-700 shadow-sm dark:text-stone-100 ${
                           task.done ? "opacity-50 line-through" : ""
@@ -736,15 +770,11 @@ export function CalendarInteractive({
                           <>
                             <div
                               onPointerDown={(e) => startTaskResize(e, task, key, "start")}
-                              onPointerMove={handleTaskDragMove}
-                              onPointerUp={handleTaskDragEnd}
                               className="absolute inset-x-0 top-0 h-1.5 cursor-ns-resize opacity-0 group-hover:opacity-100"
                               style={{ touchAction: "none" }}
                             />
                             <div
                               onPointerDown={(e) => startTaskResize(e, task, key, "end")}
-                              onPointerMove={handleTaskDragMove}
-                              onPointerUp={handleTaskDragEnd}
                               className="absolute inset-x-0 bottom-0 h-1.5 cursor-ns-resize opacity-0 group-hover:opacity-100"
                               style={{ touchAction: "none" }}
                             />
