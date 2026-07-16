@@ -186,6 +186,10 @@
     "addTask": "+ Care task",
     "addCompetition": "+ Competition",
     "allDay": "All day",
-    "otherWeekNotice": "Viewing a different week than today — the time-of-day indicator only shows on the current week."
+    "otherWeekNotice": "Viewing a different week than today — the time-of-day indicator only shows on the current week.",
+    "allStaff": "All staff",
+    "allCategories": "All categories",
+    "editShift": "Edit shift",
+    "editTask": "Edit task"
   }
 }

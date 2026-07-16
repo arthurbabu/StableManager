@@ -9,6 +9,12 @@
   --cal-task: #1baf7a;
   --cal-vacation: #eda100;
   --cal-competition: #008300;
+
+  /* Light tint backgrounds for Doctolib-style accent-bordered event cards */
+  --cal-shift-bg: #eaf2fc;
+  --cal-task-bg: #e8f7f1;
+  --cal-vacation-bg: #fdf3e0;
+  --cal-competition-bg: #e3f2e3;
 }
 
 @theme inline {
@@ -27,6 +33,11 @@
     --cal-task: #199e70;
     --cal-vacation: #c98500;
     --cal-competition: #008300;
+
+    --cal-shift-bg: #16283d;
+    --cal-task-bg: #12281f;
+    --cal-vacation-bg: #2e2410;
+    --cal-competition-bg: #132313;
   }
 }
 

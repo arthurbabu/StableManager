@@ -82,6 +82,8 @@ export async function createCareTask(formData: FormData) {
   const horseId = String(formData.get("horseId") ?? "");
   const type = String(formData.get("type") ?? "");
   const date = String(formData.get("date") ?? "");
+  const startTime = String(formData.get("startTime") ?? "").trim() || null;
+  const endTime = String(formData.get("endTime") ?? "").trim() || null;
   const assignedToId = String(formData.get("assignedToId") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
 
@@ -101,6 +103,49 @@ export async function createCareTask(formData: FormData) {
         | "TURNOUT"
         | "OTHER",
       date: new Date(date),
+      startTime,
+      endTime,
+      assignedToId,
+      notes,
+    },
+  });
+
+  revalidatePath(`/horses/${horseId}`);
+  revalidatePath("/calendar");
+  revalidatePath("/");
+}
+
+export async function updateCareTask(formData: FormData) {
+  await requireRole(["ADMIN", "MANAGER"]);
+
+  const id = String(formData.get("id") ?? "");
+  const horseId = String(formData.get("horseId") ?? "");
+  const type = String(formData.get("type") ?? "");
+  const date = String(formData.get("date") ?? "");
+  const startTime = String(formData.get("startTime") ?? "").trim() || null;
+  const endTime = String(formData.get("endTime") ?? "").trim() || null;
+  const assignedToId = String(formData.get("assignedToId") ?? "").trim() || null;
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+
+  if (!id || !horseId || !type || !date) {
+    throw new Error("Task type and date are required.");
+  }
+
+  await prisma.careTask.update({
+    where: { id },
+    data: {
+      horseId,
+      type: type as
+        | "FEEDING"
+        | "GROOMING"
+        | "TRAINING"
+        | "FARRIER"
+        | "VET"
+        | "TURNOUT"
+        | "OTHER",
+      date: new Date(date),
+      startTime,
+      endTime,
       assignedToId,
       notes,
     },
@@ -128,6 +173,7 @@ export async function toggleCareTaskDone(formData: FormData) {
   await prisma.careTask.update({ where: { id }, data: { done } });
 
   revalidatePath(`/horses/${horseId}`);
+  revalidatePath("/calendar");
   revalidatePath("/");
 }
 
@@ -140,5 +186,6 @@ export async function deleteCareTask(formData: FormData) {
   await prisma.careTask.delete({ where: { id } });
 
   revalidatePath(`/horses/${horseId}`);
+  revalidatePath("/calendar");
   revalidatePath("/");
 }

@@ -105,6 +105,8 @@ model CareTask {
   horseId      String
   type         TaskType
   date         DateTime
+  startTime    String?
+  endTime      String?
   assignedToId String?
   notes        String?
   done         Boolean  @default(false)

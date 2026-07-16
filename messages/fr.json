@@ -186,6 +186,10 @@
     "addTask": "+ Tâche",
     "addCompetition": "+ Concours",
     "allDay": "Journée",
-    "otherWeekNotice": "Vous consultez une autre semaine — l'indicateur d'heure actuelle n'apparaît que sur la semaine en cours."
+    "otherWeekNotice": "Vous consultez une autre semaine — l'indicateur d'heure actuelle n'apparaît que sur la semaine en cours.",
+    "allStaff": "Tout le personnel",
+    "allCategories": "Toutes les catégories",
+    "editShift": "Modifier le service",
+    "editTask": "Modifier la tâche"
   }
 }
