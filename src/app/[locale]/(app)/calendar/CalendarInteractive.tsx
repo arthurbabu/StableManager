@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { format } from "date-fns";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
@@ -12,6 +12,7 @@ import { ShiftForm } from "./forms/ShiftForm";
 import { TaskForm } from "./forms/TaskForm";
 import { AddCompetitionForm } from "./forms/AddCompetitionForm";
 import { VacationReviewPanel } from "./forms/VacationReviewPanel";
+import { updateCareTask } from "../horses/actions";
 
 const START_HOUR = 6;
 const END_HOUR = 20;
@@ -20,6 +21,7 @@ const TOTAL_MINUTES = (END_HOUR - START_HOUR) * 60;
 const GRID_HEIGHT = (END_HOUR - START_HOUR) * HOUR_HEIGHT;
 const HOURS = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 const DRAG_CLICK_THRESHOLD_PX = 8;
+const RESIZE_SNAP_MIN = 15;
 
 function dayKey(d: Date) {
   return format(d, "yyyy-MM-dd");
@@ -40,10 +42,14 @@ function toGridPx(minutesSinceMidnight: number) {
   return (clamped / 60) * HOUR_HEIGHT;
 }
 
+/** Unrounded minutes-since-midnight for a pixel offset within the grid. */
+function rawMinutesFromOffset(offsetY: number) {
+  return START_HOUR * 60 + (offsetY / HOUR_HEIGHT) * 60;
+}
+
 /** Rounds pixel offset within the grid to the nearest 30-minute "HH:mm". */
 function pxToTime(offsetY: number) {
-  const rawMinutes = START_HOUR * 60 + (offsetY / HOUR_HEIGHT) * 60;
-  const rounded = Math.round(rawMinutes / 30) * 30;
+  const rounded = Math.round(rawMinutesFromOffset(offsetY) / 30) * 30;
   const clamped = Math.min(Math.max(rounded, START_HOUR * 60), END_HOUR * 60);
   return minutesToTimeStr(clamped);
 }
@@ -88,6 +94,8 @@ type TaskEntry = {
   assignedTo: { name: string } | null;
 };
 
+type TimedTask = TaskEntry & { startTime: string; endTime: string };
+
 type VacationEntry = {
   id: string;
   userId: string;
@@ -105,21 +113,21 @@ type CompetitionEntry = {
 
 type Person = { id: string; name: string };
 
-type PositionedTask = TaskEntry & { startTime: string; endTime: string; top: number; height: number; col: number; colCount: number };
+type PositionedTask = TimedTask & { top: number; height: number; col: number; colCount: number };
 
-function layoutTimedTasks(tasks: (TaskEntry & { startTime: string; endTime: string })[]): PositionedTask[] {
+function layoutTimedTasks(tasks: TimedTask[]): PositionedTask[] {
   const sorted = [...tasks].sort(
     (a, b) => toMinutes(a.startTime) - toMinutes(b.startTime) || toMinutes(a.endTime) - toMinutes(b.endTime),
   );
 
   const result: PositionedTask[] = [];
-  let cluster: { task: TaskEntry & { startTime: string; endTime: string }; start: number; end: number }[] = [];
+  let cluster: { task: TimedTask; start: number; end: number }[] = [];
   let clusterMaxEnd = -Infinity;
 
   const flush = () => {
     if (cluster.length === 0) return;
     const colEnds: number[] = [];
-    const placed: { task: TaskEntry & { startTime: string; endTime: string }; start: number; end: number; col: number }[] = [];
+    const placed: { task: TimedTask; start: number; end: number; col: number }[] = [];
     for (const item of cluster) {
       let col = colEnds.findIndex((end) => end <= item.start);
       if (col === -1) {
@@ -173,6 +181,32 @@ type PanelState =
   | { kind: "competition"; date: string }
   | { kind: "vacation"; vacation: VacationEntry };
 
+type TaskDragState = {
+  mode: "move" | "resize-start" | "resize-end";
+  task: TimedTask;
+  originDayKey: string;
+  pointerStartX: number;
+  pointerStartY: number;
+  grabOffsetMin: number;
+  currentDayKey: string;
+  currentStartMin: number;
+  currentEndMin: number;
+  moved: boolean;
+};
+
+function taskToExisting(task: TaskEntry, dayKeyStr: string) {
+  return {
+    id: task.id,
+    horseId: task.horseId,
+    type: task.type,
+    date: dayKeyStr,
+    startTime: task.startTime,
+    endTime: task.endTime,
+    assignedToId: task.assignedToId,
+    notes: task.notes,
+  };
+}
+
 function Legend({ color, label }: { color: string; label: string }) {
   return (
     <span className="inline-flex items-center gap-1.5">
@@ -219,7 +253,10 @@ export function CalendarInteractive({
   const [now, setNow] = useState<Date | null>(null);
   const [staffFilter, setStaffFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
-  const [drag, setDrag] = useState<{ dayKey: string; startY: number; currentY: number } | null>(null);
+  const [createDrag, setCreateDrag] = useState<{ dayKey: string; startY: number; currentY: number } | null>(null);
+  const [taskDrag, setTaskDrag] = useState<TaskDragState | null>(null);
+  const [isCommitting, startCommit] = useTransition();
+  const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Deliberately set only post-mount (state starts null) so the current-time
   // indicator's position is never part of the server-rendered HTML — it would
@@ -238,6 +275,123 @@ export function CalendarInteractive({
   const close = () => setPanel(null);
   const matchesStaff = (personId: string | null | undefined) => !staffFilter || personId === staffFilter;
   const matchesCategory = (type: string) => !categoryFilter || type === categoryFilter;
+
+  function dayKeyAtPoint(clientX: number): string | null {
+    for (const key of Object.keys(dayRefs.current)) {
+      const el = dayRefs.current[key];
+      if (!el) continue;
+      const rect = el.getBoundingClientRect();
+      if (clientX >= rect.left && clientX <= rect.right) return key;
+    }
+    return null;
+  }
+
+  function startTaskMove(e: React.PointerEvent<HTMLDivElement>, task: TimedTask, originKey: string) {
+    if (!isManager) return;
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const dayEl = dayRefs.current[originKey];
+    const rect = dayEl?.getBoundingClientRect();
+    const offsetY = rect ? Math.min(Math.max(e.clientY - rect.top, 0), GRID_HEIGHT) : 0;
+    const startMin = toMinutes(task.startTime);
+    setTaskDrag({
+      mode: "move",
+      task,
+      originDayKey: originKey,
+      pointerStartX: e.clientX,
+      pointerStartY: e.clientY,
+      grabOffsetMin: rawMinutesFromOffset(offsetY) - startMin,
+      currentDayKey: originKey,
+      currentStartMin: startMin,
+      currentEndMin: toMinutes(task.endTime),
+      moved: false,
+    });
+  }
+
+  function startTaskResize(e: React.PointerEvent<HTMLDivElement>, task: TimedTask, originKey: string, edge: "start" | "end") {
+    if (!isManager) return;
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setTaskDrag({
+      mode: edge === "start" ? "resize-start" : "resize-end",
+      task,
+      originDayKey: originKey,
+      pointerStartX: e.clientX,
+      pointerStartY: e.clientY,
+      grabOffsetMin: 0,
+      currentDayKey: originKey,
+      currentStartMin: toMinutes(task.startTime),
+      currentEndMin: toMinutes(task.endTime),
+      moved: false,
+    });
+  }
+
+  function handleTaskDragMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!taskDrag) return;
+    e.stopPropagation();
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+    setTaskDrag((prev) => {
+      if (!prev) return prev;
+      const dx = clientX - prev.pointerStartX;
+      const dy = clientY - prev.pointerStartY;
+      const moved = prev.moved || Math.abs(dx) > DRAG_CLICK_THRESHOLD_PX || Math.abs(dy) > DRAG_CLICK_THRESHOLD_PX;
+
+      if (prev.mode === "move") {
+        const overKey = dayKeyAtPoint(clientX) ?? prev.currentDayKey;
+        const dayEl = dayRefs.current[overKey];
+        if (!dayEl) return { ...prev, moved };
+        const rect = dayEl.getBoundingClientRect();
+        const offsetY = Math.min(Math.max(clientY - rect.top, 0), GRID_HEIGHT);
+        const duration = toMinutes(prev.task.endTime) - toMinutes(prev.task.startTime);
+        const rawMin = rawMinutesFromOffset(offsetY) - prev.grabOffsetMin;
+        const snapped = Math.round(rawMin / RESIZE_SNAP_MIN) * RESIZE_SNAP_MIN;
+        const clampedStart = Math.min(Math.max(snapped, START_HOUR * 60), END_HOUR * 60 - duration);
+        return { ...prev, moved, currentDayKey: overKey, currentStartMin: clampedStart, currentEndMin: clampedStart + duration };
+      }
+
+      const dayEl = dayRefs.current[prev.originDayKey];
+      if (!dayEl) return { ...prev, moved };
+      const rect = dayEl.getBoundingClientRect();
+      const offsetY = Math.min(Math.max(clientY - rect.top, 0), GRID_HEIGHT);
+      const snapped = Math.round(rawMinutesFromOffset(offsetY) / RESIZE_SNAP_MIN) * RESIZE_SNAP_MIN;
+      if (prev.mode === "resize-start") {
+        const clamped = Math.min(Math.max(snapped, START_HOUR * 60), prev.currentEndMin - RESIZE_SNAP_MIN);
+        return { ...prev, moved, currentStartMin: clamped };
+      }
+      const clamped = Math.max(Math.min(snapped, END_HOUR * 60), prev.currentStartMin + RESIZE_SNAP_MIN);
+      return { ...prev, moved, currentEndMin: clamped };
+    });
+  }
+
+  function handleTaskDragEnd(e: React.PointerEvent<HTMLDivElement>) {
+    if (!taskDrag) return;
+    e.stopPropagation();
+
+    if (!taskDrag.moved) {
+      setPanel({ kind: "task", date: taskDrag.originDayKey, existing: taskToExisting(taskDrag.task, dayKey(taskDrag.task.date)) });
+      setTaskDrag(null);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.set("id", taskDrag.task.id);
+    formData.set("horseId", taskDrag.task.horseId);
+    formData.set("type", taskDrag.task.type);
+    formData.set("date", taskDrag.currentDayKey);
+    formData.set("startTime", minutesToTimeStr(taskDrag.currentStartMin));
+    formData.set("endTime", minutesToTimeStr(taskDrag.currentEndMin));
+    formData.set("assignedToId", taskDrag.task.assignedToId ?? "");
+    formData.set("notes", taskDrag.task.notes ?? "");
+
+    startCommit(async () => {
+      try {
+        await updateCareTask(formData);
+      } finally {
+        setTaskDrag(null);
+      }
+    });
+  }
 
   return (
     <div>
@@ -328,13 +482,14 @@ export function CalendarInteractive({
               );
             })}
 
-            {/* Shift marks — compact, not time-positioned */}
+            {/* Shifts & vacations — compact, not time-positioned */}
             <div className="border-b border-stone-200 py-2 pr-2 text-right text-[11px] text-stone-400 dark:border-neutral-800">
               {t("legendShift")}
             </div>
             {days.map((day) => {
               const key = dayKey(day);
               const dayShifts = (shiftsByDay[key] ?? []).filter((s) => matchesStaff(s.userId));
+              const dayVacations = (vacationsByDay[key] ?? []).filter((v) => matchesStaff(v.userId));
               return (
                 <div
                   key={`shifts-${key}`}
@@ -371,6 +526,20 @@ export function CalendarInteractive({
                       </span>
                     </button>
                   ))}
+                  {dayVacations.map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => setPanel({ kind: "vacation", vacation: v })}
+                      title={`${v.user.name} — ${t("legendVacation")} (${tStatus(v.status)})`}
+                      className={`block w-full truncate rounded-md border-l-[3px] px-1.5 py-0.5 text-left text-[11px] font-medium text-stone-700 dark:text-stone-100 ${
+                        v.status === "PENDING" ? "border-dashed opacity-80" : ""
+                      }`}
+                      style={{ borderLeftColor: "var(--cal-vacation)", backgroundColor: "var(--cal-vacation-bg)" }}
+                    >
+                      {v.user.name}
+                    </button>
+                  ))}
                   {isManager && (
                     <button
                       type="button"
@@ -391,7 +560,6 @@ export function CalendarInteractive({
             </div>
             {days.map((day) => {
               const key = dayKey(day);
-              const dayVacations = (vacationsByDay[key] ?? []).filter((v) => matchesStaff(v.userId));
               const dayCompetitions = competitionsByDay[key] ?? [];
               const dayUntimedTasks = (tasksByDay[key] ?? []).filter(
                 (task) => !task.startTime && matchesStaff(task.assignedToId) && matchesCategory(task.type),
@@ -401,20 +569,6 @@ export function CalendarInteractive({
                   key={`allday-${key}`}
                   className="space-y-1 border-b border-l border-stone-100 p-1 dark:border-neutral-800/60"
                 >
-                  {dayVacations.map((v) => (
-                    <button
-                      key={v.id}
-                      type="button"
-                      onClick={() => setPanel({ kind: "vacation", vacation: v })}
-                      title={`${v.user.name} — ${t("legendVacation")} (${tStatus(v.status)})`}
-                      className={`block w-full truncate rounded-md border-l-[3px] px-1.5 py-0.5 text-left text-[11px] font-medium text-stone-700 dark:text-stone-100 ${
-                        v.status === "PENDING" ? "border-dashed opacity-80" : ""
-                      }`}
-                      style={{ borderLeftColor: "var(--cal-vacation)", backgroundColor: "var(--cal-vacation-bg)" }}
-                    >
-                      {v.user.name}
-                    </button>
-                  ))}
                   {dayCompetitions.map((c) => (
                     <Link
                       key={c.id}
@@ -430,23 +584,7 @@ export function CalendarInteractive({
                     <button
                       key={task.id}
                       type="button"
-                      onClick={() =>
-                        isManager &&
-                        setPanel({
-                          kind: "task",
-                          date: key,
-                          existing: {
-                            id: task.id,
-                            horseId: task.horseId,
-                            type: task.type,
-                            date: dayKey(task.date),
-                            startTime: task.startTime,
-                            endTime: task.endTime,
-                            assignedToId: task.assignedToId,
-                            notes: task.notes,
-                          },
-                        })
-                      }
+                      onClick={() => isManager && setPanel({ kind: "task", date: key, existing: taskToExisting(task, dayKey(task.date)) })}
                       title={`${task.horse.name} — ${tTaskTypes(task.type)}${task.assignedTo ? ` (${task.assignedTo.name})` : ""}`}
                       className={`block w-full truncate rounded-md border-l-[3px] px-1.5 py-0.5 text-left text-[11px] font-medium text-stone-700 dark:text-stone-100 ${
                         task.done ? "opacity-50 line-through" : ""
@@ -470,7 +608,8 @@ export function CalendarInteractive({
               );
             })}
 
-            {/* Time grid — timed tasks live here; drag to create, click to edit */}
+            {/* Time grid — timed tasks live here; drag empty space to create,
+                drag a task to move it, drag its edges to resize, click to edit */}
             <div className="relative" style={{ height: GRID_HEIGHT }}>
               {HOURS.map((h, i) => (
                 <div
@@ -485,45 +624,53 @@ export function CalendarInteractive({
             {days.map((day) => {
               const key = dayKey(day);
               const timedTasks = (tasksByDay[key] ?? []).filter(
-                (task): task is TaskEntry & { startTime: string; endTime: string } =>
-                  !!task.startTime && !!task.endTime && matchesStaff(task.assignedToId) && matchesCategory(task.type),
+                (task): task is TimedTask =>
+                  !!task.startTime &&
+                  !!task.endTime &&
+                  task.id !== taskDrag?.task.id &&
+                  matchesStaff(task.assignedToId) &&
+                  matchesCategory(task.type),
               );
               const positioned = layoutTimedTasks(timedTasks);
               const isToday = key === todayKey;
-              const isDraggingHere = drag && drag.dayKey === key;
+              const isCreatingHere = createDrag && createDrag.dayKey === key;
+              const isTaskDragHere = taskDrag && taskDrag.currentDayKey === key;
 
               return (
                 <div
                   key={`grid-${key}`}
+                  ref={(el) => {
+                    dayRefs.current[key] = el;
+                  }}
                   onPointerDown={
                     isManager
                       ? (e) => {
                           const rect = e.currentTarget.getBoundingClientRect();
                           const offsetY = Math.min(Math.max(e.clientY - rect.top, 0), GRID_HEIGHT);
                           e.currentTarget.setPointerCapture(e.pointerId);
-                          setDrag({ dayKey: key, startY: offsetY, currentY: offsetY });
+                          setCreateDrag({ dayKey: key, startY: offsetY, currentY: offsetY });
                         }
                       : undefined
                   }
                   onPointerMove={
                     isManager
                       ? (e) => {
-                          if (!drag || drag.dayKey !== key) return;
+                          if (!createDrag || createDrag.dayKey !== key) return;
                           const rect = e.currentTarget.getBoundingClientRect();
                           const offsetY = Math.min(Math.max(e.clientY - rect.top, 0), GRID_HEIGHT);
-                          setDrag((prev) => (prev ? { ...prev, currentY: offsetY } : prev));
+                          setCreateDrag((prev) => (prev ? { ...prev, currentY: offsetY } : prev));
                         }
                       : undefined
                   }
                   onPointerUp={
                     isManager
                       ? () => {
-                          if (!drag || drag.dayKey !== key) return;
-                          const isClick = Math.abs(drag.currentY - drag.startY) < DRAG_CLICK_THRESHOLD_PX;
+                          if (!createDrag || createDrag.dayKey !== key) return;
+                          const isClick = Math.abs(createDrag.currentY - createDrag.startY) < DRAG_CLICK_THRESHOLD_PX;
                           const range = isClick
-                            ? { startTime: pxToTime(drag.startY), endTime: addMinutes(pxToTime(drag.startY), 60) }
-                            : resolveDragRange(drag.startY, drag.currentY);
-                          setDrag(null);
+                            ? { startTime: pxToTime(createDrag.startY), endTime: addMinutes(pxToTime(createDrag.startY), 60) }
+                            : resolveDragRange(createDrag.startY, createDrag.currentY);
+                          setCreateDrag(null);
                           setPanel({ kind: "task", date: key, startTime: range.startTime, endTime: range.endTime });
                         }
                       : undefined
@@ -547,12 +694,12 @@ export function CalendarInteractive({
                     </div>
                   )}
 
-                  {isDraggingHere && (
+                  {isCreatingHere && (
                     <div
                       className="absolute inset-x-0.5 z-20 rounded-md border-2 border-dashed"
                       style={{
-                        top: Math.min(drag.startY, drag.currentY),
-                        height: Math.max(Math.abs(drag.currentY - drag.startY), 4),
+                        top: Math.min(createDrag.startY, createDrag.currentY),
+                        height: Math.max(Math.abs(createDrag.currentY - createDrag.startY), 4),
                         backgroundColor: "var(--cal-task-bg)",
                         borderColor: "var(--cal-task)",
                       }}
@@ -564,28 +711,13 @@ export function CalendarInteractive({
                     return (
                       <div
                         key={task.id}
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={() =>
-                          isManager &&
-                          setPanel({
-                            kind: "task",
-                            date: key,
-                            existing: {
-                              id: task.id,
-                              horseId: task.horseId,
-                              type: task.type,
-                              date: dayKey(task.date),
-                              startTime: task.startTime,
-                              endTime: task.endTime,
-                              assignedToId: task.assignedToId,
-                              notes: task.notes,
-                            },
-                          })
-                        }
+                        onPointerDown={(e) => startTaskMove(e, task, key)}
+                        onPointerMove={handleTaskDragMove}
+                        onPointerUp={handleTaskDragEnd}
                         title={`${task.horse.name}: ${task.startTime}–${task.endTime} — ${tTaskTypes(task.type)}${task.assignedTo ? ` (${task.assignedTo.name})` : ""}`}
-                        className={`absolute overflow-hidden rounded-md border-l-[3px] px-1.5 py-0.5 text-[11px] text-stone-700 shadow-sm dark:text-stone-100 ${
+                        className={`group absolute overflow-hidden rounded-md border-l-[3px] px-1.5 py-0.5 text-[11px] text-stone-700 shadow-sm dark:text-stone-100 ${
                           task.done ? "opacity-50 line-through" : ""
-                        } ${isManager ? "cursor-pointer" : ""}`}
+                        } ${isManager ? "cursor-grab active:cursor-grabbing" : ""}`}
                         style={{
                           top: task.top,
                           height: task.height,
@@ -593,15 +725,58 @@ export function CalendarInteractive({
                           width: `calc(${widthPct}% - 2px)`,
                           borderLeftColor: "var(--cal-task)",
                           backgroundColor: "var(--cal-task-bg)",
+                          touchAction: isManager ? "none" : undefined,
                         }}
                       >
                         <p className="truncate font-medium">{task.horse.name}</p>
                         <p className="truncate opacity-80">
                           {tTaskTypes(task.type)} · {task.startTime}–{task.endTime}
                         </p>
+                        {isManager && (
+                          <>
+                            <div
+                              onPointerDown={(e) => startTaskResize(e, task, key, "start")}
+                              onPointerMove={handleTaskDragMove}
+                              onPointerUp={handleTaskDragEnd}
+                              className="absolute inset-x-0 top-0 h-1.5 cursor-ns-resize opacity-0 group-hover:opacity-100"
+                              style={{ touchAction: "none" }}
+                            />
+                            <div
+                              onPointerDown={(e) => startTaskResize(e, task, key, "end")}
+                              onPointerMove={handleTaskDragMove}
+                              onPointerUp={handleTaskDragEnd}
+                              className="absolute inset-x-0 bottom-0 h-1.5 cursor-ns-resize opacity-0 group-hover:opacity-100"
+                              style={{ touchAction: "none" }}
+                            />
+                          </>
+                        )}
                       </div>
                     );
                   })}
+
+                  {isTaskDragHere && (
+                    <div
+                      className={`absolute overflow-hidden rounded-md border-l-[3px] px-1.5 py-0.5 text-[11px] text-stone-700 shadow-lg ring-2 ring-emerald-500 dark:text-stone-100 dark:ring-emerald-400 ${
+                        isCommitting ? "animate-pulse" : ""
+                      }`}
+                      style={{
+                        top: toGridPx(taskDrag.currentStartMin),
+                        height: Math.max(toGridPx(taskDrag.currentEndMin) - toGridPx(taskDrag.currentStartMin), 22),
+                        left: 0,
+                        width: "calc(100% - 2px)",
+                        borderLeftColor: "var(--cal-task)",
+                        backgroundColor: "var(--cal-task-bg)",
+                        zIndex: 30,
+                        opacity: 0.95,
+                      }}
+                    >
+                      <p className="truncate font-medium">{taskDrag.task.horse.name}</p>
+                      <p className="truncate opacity-80">
+                        {tTaskTypes(taskDrag.task.type)} · {minutesToTimeStr(taskDrag.currentStartMin)}–
+                        {minutesToTimeStr(taskDrag.currentEndMin)}
+                      </p>
+                    </div>
+                  )}
                 </div>
               );
             })}
