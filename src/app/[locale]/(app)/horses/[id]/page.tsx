@@ -4,7 +4,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser, canManage } from "@/lib/auth-helpers";
 import { getDateFnsLocale } from "@/i18n/dateLocale";
-import { TASK_TYPES } from "@/lib/constants";
+import { TASK_TYPES, LOCATION_TASK_TYPES } from "@/lib/constants";
 import { Card, PageHeader, EmptyState, Badge, Button, Input, Select, Textarea, Label } from "@/components/ui";
 import {
   updateHorse,
@@ -29,6 +29,7 @@ export default async function HorseDetailPage({
   const tTaskTypes = await getTranslations("TaskTypes");
   const locale = await getLocale();
   const dateLocale = getDateFnsLocale(locale);
+  const today = new Date();
 
   const [horse, staff] = await Promise.all([
     prisma.horse.findUnique({
@@ -101,6 +102,22 @@ export default async function HorseDetailPage({
                   />
                 </div>
                 <div>
+                  <Label htmlFor="sireNumber">{tHorses("sireNumber")}</Label>
+                  <Input id="sireNumber" name="sireNumber" defaultValue={horse.sireNumber ?? ""} />
+                </div>
+                <div>
+                  <Label htmlFor="transponderNumber">{tHorses("transponderNumber")}</Label>
+                  <Input id="transponderNumber" name="transponderNumber" defaultValue={horse.transponderNumber ?? ""} />
+                </div>
+                <div>
+                  <Label htmlFor="ownerName">{tHorses("ownerName")}</Label>
+                  <Input id="ownerName" name="ownerName" defaultValue={horse.ownerName ?? ""} />
+                </div>
+                <div>
+                  <Label htmlFor="ownerContact">{tHorses("ownerContact")}</Label>
+                  <Input id="ownerContact" name="ownerContact" defaultValue={horse.ownerContact ?? ""} />
+                </div>
+                <div>
                   <Label htmlFor="notes">{tCommon("notes")}</Label>
                   <Textarea id="notes" name="notes" defaultValue={horse.notes ?? ""} rows={3} />
                 </div>
@@ -125,6 +142,22 @@ export default async function HorseDetailPage({
                 <div className="flex justify-between">
                   <dt className="text-stone-400">{tHorses("dateOfBirth")}</dt>
                   <dd>{horse.dateOfBirth ? format(horse.dateOfBirth, "d MMM yyyy", { locale: dateLocale }) : "—"}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-stone-400">{tHorses("sireNumber")}</dt>
+                  <dd>{horse.sireNumber ?? "—"}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-stone-400">{tHorses("transponderNumber")}</dt>
+                  <dd>{horse.transponderNumber ?? "—"}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-stone-400">{tHorses("ownerName")}</dt>
+                  <dd>{horse.ownerName ?? "—"}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-stone-400">{tHorses("ownerContact")}</dt>
+                  <dd>{horse.ownerContact ?? "—"}</dd>
                 </div>
                 {horse.notes && (
                   <div>
@@ -165,6 +198,11 @@ export default async function HorseDetailPage({
                   ))}
                 </Select>
                 <Input type="text" name="notes" placeholder={tCommon("notes")} />
+                <Input type="text" name="location" placeholder={t("locationOptional")} className="col-span-2" />
+                <div className="col-span-2">
+                  <Label htmlFor="nextReminderDate">{t("nextReminderDateShort")}</Label>
+                  <Input id="nextReminderDate" type="date" name="nextReminderDate" />
+                </div>
                 <Button type="submit" className="col-span-2 md:col-span-4">
                   {t("addTaskButton")}
                 </Button>
@@ -182,6 +220,7 @@ export default async function HorseDetailPage({
               <ul className="space-y-2">
                 {horse.careTasks.map((task) => {
                   const canToggle = isManager || task.assignedToId === user.id;
+                  const overdueReminder = task.nextReminderDate && task.nextReminderDate <= today;
                   return (
                     <li
                       key={task.id}
@@ -221,6 +260,15 @@ export default async function HorseDetailPage({
                           <Badge>{tTaskTypes(task.type)}</Badge>
                           {task.assignedTo && (
                             <span className="ml-2 text-stone-400">{task.assignedTo.name}</span>
+                          )}
+                          {LOCATION_TASK_TYPES.includes(task.type as (typeof LOCATION_TASK_TYPES)[number]) &&
+                            task.location && <p className="text-stone-400">{task.location}</p>}
+                          {task.nextReminderDate && (
+                            <p className={overdueReminder ? "font-medium text-red-600 dark:text-red-400" : "text-stone-400"}>
+                              {t("nextReminderLabel", {
+                                date: format(task.nextReminderDate, "d MMM yyyy", { locale: dateLocale }),
+                              })}
+                            </p>
                           )}
                           {task.notes && <p className="text-stone-400">{task.notes}</p>}
                         </div>

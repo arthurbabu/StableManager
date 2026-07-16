@@ -34,7 +34,9 @@
     "FARRIER": "Farrier",
     "VET": "Vet",
     "TURNOUT": "Turnout",
-    "OTHER": "Other"
+    "OTHER": "Other",
+    "ENTRY": "Entry",
+    "EXIT": "Exit"
   },
   "HorseSex": {
     "MARE": "Mare",
@@ -83,7 +85,9 @@
     "upcomingCompetitions": "Upcoming competitions",
     "noCompetitions": "No competitions scheduled.",
     "entries": "{count, plural, one {# entry} other {# entries}}",
-    "viewAllCompetitions": "View all competitions →"
+    "viewAllCompetitions": "View all competitions →",
+    "vetReminders": "Vet reminders",
+    "noVetReminders": "No upcoming reminders."
   },
   "Staff": {
     "title": "Staff schedule",
@@ -120,7 +124,12 @@
     "addHorseButton": "Add horse",
     "noHorses": "No horses yet.",
     "inactive": "Inactive",
-    "openTasks": "{count, plural, one {# open task} other {# open tasks}}"
+    "openTasks": "{count, plural, one {# open task} other {# open tasks}}",
+    "sireNumber": "SIRE No.",
+    "transponderNumber": "Transponder No.",
+    "ownerName": "Owner name",
+    "ownerContact": "Owner contact",
+    "registerLink": "Breeding register"
   },
   "HorseDetail": {
     "markInactive": "Mark inactive",
@@ -135,7 +144,13 @@
     "careSchedule": "Care schedule",
     "noTasks": "No care tasks yet.",
     "markDone": "Mark done",
-    "markNotDone": "Mark not done"
+    "markNotDone": "Mark not done",
+    "provenanceAddress": "Origin address",
+    "destinationAddress": "Destination address",
+    "nextReminderDate": "Next reminder (vaccination)",
+    "nextReminderDateShort": "Next vaccination reminder",
+    "nextReminderLabel": "Next reminder: {date}",
+    "locationOptional": "Origin/destination address (optional)"
   },
   "Competitions": {
     "title": "Competitions",
@@ -191,5 +206,12 @@
     "allCategories": "All categories",
     "editShift": "Edit shift",
     "editTask": "Edit task"
+  },
+  "Register": {
+    "title": "Breeding register",
+    "subtitle": "Generate the official presence register (entries/exits) for a given period, as a PDF.",
+    "periodFrom": "From",
+    "periodTo": "To",
+    "generateButton": "Generate PDF"
   }
 }

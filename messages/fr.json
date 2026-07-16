@@ -34,7 +34,9 @@
     "FARRIER": "Maréchal-ferrant",
     "VET": "Vétérinaire",
     "TURNOUT": "Sortie au pré",
-    "OTHER": "Autre"
+    "OTHER": "Autre",
+    "ENTRY": "Entrée",
+    "EXIT": "Sortie"
   },
   "HorseSex": {
     "MARE": "Jument",
@@ -83,7 +85,9 @@
     "upcomingCompetitions": "Concours à venir",
     "noCompetitions": "Aucun concours programmé.",
     "entries": "{count, plural, one {# engagé} other {# engagés}}",
-    "viewAllCompetitions": "Voir tous les concours →"
+    "viewAllCompetitions": "Voir tous les concours →",
+    "vetReminders": "Rappels vétérinaires",
+    "noVetReminders": "Aucun rappel à venir."
   },
   "Staff": {
     "title": "Planning du personnel",
@@ -120,7 +124,12 @@
     "addHorseButton": "Ajouter le cheval",
     "noHorses": "Aucun cheval pour le moment.",
     "inactive": "Inactif",
-    "openTasks": "{count, plural, one {# tâche en cours} other {# tâches en cours}}"
+    "openTasks": "{count, plural, one {# tâche en cours} other {# tâches en cours}}",
+    "sireNumber": "N° SIRE",
+    "transponderNumber": "N° transpondeur",
+    "ownerName": "Nom du propriétaire",
+    "ownerContact": "Contact du propriétaire",
+    "registerLink": "Registre d'élevage"
   },
   "HorseDetail": {
     "markInactive": "Marquer inactif",
@@ -135,7 +144,13 @@
     "careSchedule": "Planning des soins",
     "noTasks": "Aucune tâche de soin pour le moment.",
     "markDone": "Marquer comme fait",
-    "markNotDone": "Marquer comme non fait"
+    "markNotDone": "Marquer comme non fait",
+    "provenanceAddress": "Adresse de provenance",
+    "destinationAddress": "Adresse de destination",
+    "nextReminderDate": "Prochain rappel (vaccination)",
+    "nextReminderDateShort": "Prochain rappel vaccination",
+    "nextReminderLabel": "Prochain rappel : {date}",
+    "locationOptional": "Adresse de provenance/destination (optionnel)"
   },
   "Competitions": {
     "title": "Concours",
@@ -191,5 +206,12 @@
     "allCategories": "Toutes les catégories",
     "editShift": "Modifier le service",
     "editTask": "Modifier la tâche"
+  },
+  "Register": {
+    "title": "Registre d'élevage",
+    "subtitle": "Générez le registre de présence (entrées/sorties) pour une période donnée, au format PDF officiel.",
+    "periodFrom": "Du",
+    "periodTo": "Au",
+    "generateButton": "Générer le PDF"
   }
 }

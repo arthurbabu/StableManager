@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getLocale } from "next-intl/server";
+import type { TaskType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireRole, requireUser } from "@/lib/auth-helpers";
 import { redirect } from "@/i18n/navigation";
@@ -29,6 +30,10 @@ export async function createHorse(formData: FormData) {
         | null,
       dateOfBirth: parseOptionalDate(formData.get("dateOfBirth")),
       notes: String(formData.get("notes") ?? "").trim() || null,
+      sireNumber: String(formData.get("sireNumber") ?? "").trim() || null,
+      transponderNumber: String(formData.get("transponderNumber") ?? "").trim() || null,
+      ownerName: String(formData.get("ownerName") ?? "").trim() || null,
+      ownerContact: String(formData.get("ownerContact") ?? "").trim() || null,
     },
   });
 
@@ -57,6 +62,10 @@ export async function updateHorse(formData: FormData) {
         | null,
       dateOfBirth: parseOptionalDate(formData.get("dateOfBirth")),
       notes: String(formData.get("notes") ?? "").trim() || null,
+      sireNumber: String(formData.get("sireNumber") ?? "").trim() || null,
+      transponderNumber: String(formData.get("transponderNumber") ?? "").trim() || null,
+      ownerName: String(formData.get("ownerName") ?? "").trim() || null,
+      ownerContact: String(formData.get("ownerContact") ?? "").trim() || null,
     },
   });
 
@@ -86,6 +95,8 @@ export async function createCareTask(formData: FormData) {
   const endTime = String(formData.get("endTime") ?? "").trim() || null;
   const assignedToId = String(formData.get("assignedToId") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
+  const location = String(formData.get("location") ?? "").trim() || null;
+  const nextReminderDate = parseOptionalDate(formData.get("nextReminderDate"));
 
   if (!horseId || !type || !date) {
     throw new Error("Task type and date are required.");
@@ -94,19 +105,14 @@ export async function createCareTask(formData: FormData) {
   await prisma.careTask.create({
     data: {
       horseId,
-      type: type as
-        | "FEEDING"
-        | "GROOMING"
-        | "TRAINING"
-        | "FARRIER"
-        | "VET"
-        | "TURNOUT"
-        | "OTHER",
+      type: type as TaskType,
       date: new Date(date),
       startTime,
       endTime,
       assignedToId,
       notes,
+      location,
+      nextReminderDate,
     },
   });
 
@@ -126,6 +132,8 @@ export async function updateCareTask(formData: FormData) {
   const endTime = String(formData.get("endTime") ?? "").trim() || null;
   const assignedToId = String(formData.get("assignedToId") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
+  const location = String(formData.get("location") ?? "").trim() || null;
+  const nextReminderDate = parseOptionalDate(formData.get("nextReminderDate"));
 
   if (!id || !horseId || !type || !date) {
     throw new Error("Task type and date are required.");
@@ -135,19 +143,14 @@ export async function updateCareTask(formData: FormData) {
     where: { id },
     data: {
       horseId,
-      type: type as
-        | "FEEDING"
-        | "GROOMING"
-        | "TRAINING"
-        | "FARRIER"
-        | "VET"
-        | "TURNOUT"
-        | "OTHER",
+      type: type as TaskType,
       date: new Date(date),
       startTime,
       endTime,
       assignedToId,
       notes,
+      location,
+      nextReminderDate,
     },
   });
 

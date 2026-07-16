@@ -1,4 +1,4 @@
-import { endOfDay, format, startOfDay } from "date-fns";
+import { addDays, endOfDay, format, startOfDay } from "date-fns";
 import { getLocale, getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser, canManage } from "@/lib/auth-helpers";
@@ -15,7 +15,7 @@ export default async function DashboardPage() {
   const todayStart = startOfDay(new Date());
   const todayEnd = endOfDay(new Date());
 
-  const [todaysShifts, myTasksToday, upcomingVacations, pendingVacations, upcomingCompetitions] =
+  const [todaysShifts, myTasksToday, upcomingVacations, pendingVacations, upcomingCompetitions, vetReminders] =
     await Promise.all([
       prisma.shift.findMany({
         where: { date: { gte: todayStart, lte: todayEnd } },
@@ -52,6 +52,15 @@ export default async function DashboardPage() {
         orderBy: { startDate: "asc" },
         take: 3,
         include: { entries: true },
+      }),
+      prisma.careTask.findMany({
+        where: {
+          type: "VET",
+          nextReminderDate: { not: null, lte: addDays(todayStart, 30) },
+        },
+        include: { horse: true },
+        orderBy: { nextReminderDate: "asc" },
+        take: 5,
       }),
     ]);
 
@@ -179,6 +188,36 @@ export default async function DashboardPage() {
                   </span>
                 </li>
               ))}
+            </ul>
+          )}
+        </Card>
+
+        <Card>
+          <h2 className="mb-3 font-medium text-stone-900 dark:text-stone-50">
+            {t("vetReminders")}
+          </h2>
+          {vetReminders.length === 0 ? (
+            <EmptyState message={t("noVetReminders")} />
+          ) : (
+            <ul className="space-y-2">
+              {vetReminders.map((task) => {
+                const overdue = task.nextReminderDate && task.nextReminderDate < todayStart;
+                return (
+                  <li key={task.id}>
+                    <Link
+                      href={`/horses/${task.horseId}`}
+                      className="flex items-center justify-between rounded-lg bg-stone-50 px-3 py-2 text-sm hover:bg-stone-100 dark:bg-neutral-800 dark:hover:bg-neutral-700"
+                    >
+                      <span className="font-medium text-stone-700 dark:text-stone-200">
+                        {task.horse.name}
+                      </span>
+                      <span className={overdue ? "font-medium text-red-600 dark:text-red-400" : "text-stone-500 dark:text-stone-400"}>
+                        {task.nextReminderDate && format(task.nextReminderDate, "d MMM yyyy", { locale: dateLocale })}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Card>

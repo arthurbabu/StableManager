@@ -32,6 +32,8 @@ enum TaskType {
   FARRIER
   VET
   TURNOUT
+  ENTRY
+  EXIT
   OTHER
 }
 
@@ -86,31 +88,37 @@ model VacationRequest {
 }
 
 model Horse {
-  id          String    @id @default(cuid())
-  name        String
-  breed       String?
-  color       String?
-  sex         HorseSex?
-  dateOfBirth DateTime?
-  notes       String?
-  active      Boolean   @default(true)
-  createdAt   DateTime  @default(now())
+  id                String    @id @default(cuid())
+  name              String
+  breed             String?
+  color             String?
+  sex               HorseSex?
+  dateOfBirth       DateTime?
+  notes             String?
+  active            Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  sireNumber        String? // official SIRE identification number
+  transponderNumber String? // microchip / transponder number
+  ownerName         String?
+  ownerContact      String?
 
   careTasks          CareTask[]
   competitionEntries CompetitionEntry[]
 }
 
 model CareTask {
-  id           String   @id @default(cuid())
-  horseId      String
-  type         TaskType
-  date         DateTime
-  startTime    String?
-  endTime      String?
-  assignedToId String?
-  notes        String?
-  done         Boolean  @default(false)
-  createdAt    DateTime @default(now())
+  id               String    @id @default(cuid())
+  horseId          String
+  type             TaskType
+  date             DateTime
+  startTime        String?
+  endTime          String?
+  assignedToId     String?
+  notes            String?
+  done             Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  location         String? // ENTRY: provenance address · EXIT: destination address
+  nextReminderDate DateTime? // VET: next vaccination/reminder due date
 
   horse      Horse @relation(fields: [horseId], references: [id], onDelete: Cascade)
   assignedTo User? @relation(fields: [assignedToId], references: [id])

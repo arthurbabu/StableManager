@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Input, Select } from "@/components/ui";
-import { TASK_TYPES } from "@/lib/constants";
+import { TASK_TYPES, LOCATION_TASK_TYPES } from "@/lib/constants";
 import { createCareTask, updateCareTask, deleteCareTask } from "../../horses/actions";
 
 type TaskType = (typeof TASK_TYPES)[number];
@@ -17,6 +17,8 @@ type ExistingTask = {
   endTime: string | null;
   assignedToId: string | null;
   notes: string | null;
+  location: string | null;
+  nextReminderDate: string | null; // yyyy-MM-dd
 };
 
 export function TaskForm({
@@ -42,7 +44,10 @@ export function TaskForm({
   const tCompetitionDetail = useTranslations("CompetitionDetail");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [type, setType] = useState<TaskType | "">(task?.type ?? "");
   const isEdit = !!task;
+  const showLocation = LOCATION_TASK_TYPES.includes(type as (typeof LOCATION_TASK_TYPES)[number]);
+  const showReminder = type === "VET";
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -87,13 +92,13 @@ export function TaskForm({
           </option>
         ))}
       </Select>
-      <Select name="type" required defaultValue={task?.type ?? ""}>
+      <Select name="type" required value={type} onChange={(e) => setType(e.target.value as TaskType)}>
         <option value="" disabled>
           {t("taskType")}
         </option>
-        {TASK_TYPES.map((type) => (
-          <option key={type} value={type}>
-            {tTaskTypes(type)}
+        {TASK_TYPES.map((taskType) => (
+          <option key={taskType} value={taskType}>
+            {tTaskTypes(taskType)}
           </option>
         ))}
       </Select>
@@ -110,6 +115,20 @@ export function TaskForm({
           </option>
         ))}
       </Select>
+      {showLocation && (
+        <Input
+          type="text"
+          name="location"
+          placeholder={type === "EXIT" ? t("destinationAddress") : t("provenanceAddress")}
+          defaultValue={task?.location ?? ""}
+        />
+      )}
+      {showReminder && (
+        <div>
+          <label className="mb-1 block text-xs text-stone-500 dark:text-stone-400">{t("nextReminderDate")}</label>
+          <Input type="date" name="nextReminderDate" defaultValue={task?.nextReminderDate ?? ""} />
+        </div>
+      )}
       <Input type="text" name="notes" placeholder={tCommon("notes")} defaultValue={task?.notes ?? ""} />
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       <div className="flex gap-2">

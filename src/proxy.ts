@@ -36,5 +36,8 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico|manifest.json|icons).*)"],
+  // All API routes handle their own auth (returning 401/403 rather than
+  // redirecting to the HTML login page) and aren't part of the localized
+  // page tree, so they're excluded wholesale rather than route-by-route.
+  matcher: ["/((?!api/|_next/static|_next/image|favicon.ico|manifest.json|icons).*)"],
 };

@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser, canManage } from "@/lib/auth-helpers";
-import { Card, PageHeader, EmptyState, Badge, Button, Input, Select } from "@/components/ui";
+import { Card, PageHeader, EmptyState, Badge, Button, Input, Select, LinkButton } from "@/components/ui";
 import { createHorse } from "./actions";
 
 export default async function HorsesPage() {
@@ -24,6 +24,13 @@ export default async function HorsesPage() {
       <PageHeader
         title={t("title")}
         subtitle={t("activeCount", { count: horses.filter((h) => h.active).length })}
+        action={
+          isManager && (
+            <LinkButton href="/horses/register" variant="secondary">
+              {t("registerLink")}
+            </LinkButton>
+          )
+        }
       />
 
       {isManager && (

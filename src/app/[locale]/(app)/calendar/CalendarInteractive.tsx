@@ -89,6 +89,8 @@ type TaskEntry = {
   endTime: string | null;
   assignedToId: string | null;
   notes: string | null;
+  location: string | null;
+  nextReminderDate: Date | null;
   done: boolean;
   horse: { name: string };
   assignedTo: { name: string } | null;
@@ -176,6 +178,8 @@ type PanelState =
         endTime: string | null;
         assignedToId: string | null;
         notes: string | null;
+        location: string | null;
+        nextReminderDate: string | null;
       };
     }
   | { kind: "competition"; date: string }
@@ -204,6 +208,8 @@ function taskToExisting(task: TaskEntry, dayKeyStr: string) {
     endTime: task.endTime,
     assignedToId: task.assignedToId,
     notes: task.notes,
+    location: task.location,
+    nextReminderDate: task.nextReminderDate ? dayKey(task.nextReminderDate) : null,
   };
 }
 
