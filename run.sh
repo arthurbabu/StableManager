@@ -17,6 +17,13 @@ fi
 ADMIN_NAME="${ADMIN_NAME:-Admin}"
 export DATABASE_URL="${DATABASE_URL:-file:/data/stable-manager.db}"
 
+# Belt and suspenders alongside `trustHost: true` in src/auth.ts — this
+# beta version of Auth.js has been inconsistent about which internal code
+# path actually reads the code-level option, so set the env var it falls
+# back to as well. Needed because this app is reached via a LAN IP that
+# has no fixed canonical domain to validate the Host header against.
+export AUTH_TRUST_HOST=true
+
 mkdir -p /data
 
 # Generate AUTH_SECRET once and persist it to /data, so sessions survive

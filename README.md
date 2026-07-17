@@ -137,7 +137,12 @@ Home Assistant clones the repo itself and finds the add-on inside it.
 
 Pushing new commits to `main` doesn't auto-update installed add-ons —
 click **Check for updates** in the store's "⋮" menu, then **Update** on the
-add-on's page, whenever you want it to pick up changes.
+add-on's page, whenever you want it to pick up changes. **The Supervisor
+only offers an update when `version` in `config.yaml` (and
+`stable_manager/config.yaml`) actually changes** — if you edit code without
+bumping it, the add-on has nothing to detect and silently keeps running the
+old image, even after "Check for updates". Bump it (e.g. `1.0.0` →
+`1.0.1`) with every change you want deployed.
 
 ### Option B — local add-on (no GitHub push required)
 
