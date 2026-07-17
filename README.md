@@ -64,7 +64,10 @@ key structure — every namespace/key must exist in every locale file).
 
 ```
 prisma/schema.prisma       Data model (users, shifts, vacations, horses, care tasks, competitions)
-prisma/seed.ts             Demo data
+prisma/seed.ts             Demo data (local dev only)
+prisma/bootstrap-admin.ts  Creates one ADMIN account from env vars on first run (self-hosted deploys)
+Dockerfile, run.sh          Container build + entrypoint, used by both plain Docker and the HA add-on below
+config.yaml, DOCS.md        Home Assistant OS local add-on manifest + its in-UI documentation
 messages/fr.json           French strings (default locale)
 messages/en.json           English strings
 src/i18n/routing.ts        Locale list, default locale, URL prefix strategy
@@ -107,6 +110,47 @@ The app has a manifest and icons configured so it opens full-screen like a nativ
    database (via `vercel env pull` locally, or a one-off script) to create the
    tables, then run the seed script once if you want demo data — otherwise
    create your first ADMIN user directly in the database.
+
+## Deploying on Home Assistant OS (NUC or similar)
+
+Home Assistant OS isn't a general-purpose Linux box — it's built around the
+Supervisor, which runs everything as Docker containers ("add-ons"). The
+`Dockerfile`, `config.yaml`, and `run.sh` in this repo make it installable
+as a **local add-on**, keeping everything (SQLite database, session secret)
+in the add-on's own persistent storage, with its own port and its own login
+— fully independent of Home Assistant's.
+
+1. **Get filesystem access to the NUC.** In Home Assistant, turn on
+   "Advanced Mode" on your user profile (click your name, bottom left),
+   then install either the **Samba share** add-on (drag-and-drop from your
+   PC/Mac) or **Terminal & SSH** (command-line) from the Add-on Store.
+2. **Copy this whole repository** to `/addons/stable_manager/` on the NUC
+   (via the Samba share, or `git clone` / `scp` over SSH). The folder must
+   contain `config.yaml` and `Dockerfile` at its root — that's what marks it
+   as an add-on.
+3. In the Home Assistant UI: **Settings → Add-ons → Add-on Store**, open the
+   "⋮" menu (top right) → **Check for updates**. "Stable Manager" should
+   appear under **Local add-ons** at the bottom of the store.
+4. Open it and click **Install**. This triggers a Docker build on the NUC —
+   several minutes the first time.
+5. Go to the **Configuration** tab and set `admin_email` and
+   `admin_password` (8+ characters) — this creates your one and only
+   auto-provisioned account, with the ADMIN role. Leave `auth_secret` blank;
+   one is generated and persisted for you on first start. Save.
+6. **Start** the add-on, and check the **Log** tab for
+   "Starting Stable Manager on 0.0.0.0:3000...".
+7. From any phone or PC on your home network, open
+   `http://<nuc-ip-or-hostname>:3000` and log in with the admin account from
+   step 5. From there, use **Staff Accounts** to create real logins for the
+   rest of the team — this path creates no demo data.
+
+This deploys for **home-network access only**. To also reach it away from
+home, you'd need your own port-forward + dynamic DNS + TLS setup (there's no
+built-in Ingress/remote-access wiring here) — worth doing only if you
+specifically need that; it's a materially bigger setup than the above.
+
+See `DOCS.md` for the same instructions in the format Home Assistant shows
+in the add-on's own Documentation tab, including backup notes.
 
 ## Notes
 
