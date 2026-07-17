@@ -26,14 +26,17 @@ RUN npm install
 COPY . .
 
 # `next build` doesn't connect to the database (every route in this app is
-# dynamic — none are statically prerendered) but sets placeholders anyway in
-# case anything reads these at import time. The real values are supplied by
-# run.sh at container start.
-ENV DATABASE_URL="file:./build-placeholder.db"
-ENV AUTH_SECRET="build-time-placeholder-not-used-at-runtime"
-
-RUN npx prisma generate
-RUN npm run build
+# dynamic — none are statically prerendered) but Prisma's schema loader still
+# wants DATABASE_URL *defined* to validate the schema. These are passed
+# inline to only the commands that need them, NOT via `ENV` — `ENV` persists
+# into the running container's environment too, which would make run.sh's
+# `${DATABASE_URL:-...}` / `${AUTH_SECRET:-...}` fallbacks never trigger
+# (they only apply when a variable is unset, and ENV would leave it set to
+# these placeholders) — silently pointing the app at a throwaway database
+# outside the persistent /data volume, and worse, running with a hardcoded,
+# publicly-known session secret.
+RUN DATABASE_URL="file:./build-placeholder.db" npx prisma generate
+RUN DATABASE_URL="file:./build-placeholder.db" AUTH_SECRET="build-time-placeholder-not-used-at-runtime" npm run build
 
 ENV NODE_ENV=production
 RUN chmod +x run.sh
