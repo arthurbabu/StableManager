@@ -68,6 +68,8 @@ prisma/seed.ts             Demo data (local dev only)
 prisma/bootstrap-admin.ts  Creates one ADMIN account from env vars on first run (self-hosted deploys)
 Dockerfile, run.sh          Container build + entrypoint, used by both plain Docker and the HA add-on below
 config.yaml, DOCS.md        Home Assistant OS local add-on manifest + its in-UI documentation
+repository.yaml              Marks this repo as a HA add-on repository (Settings → Add-ons → Repositories)
+stable_manager/              The same add-on, packaged for the repository-install path (see below)
 messages/fr.json           French strings (default locale)
 messages/en.json           English strings
 src/i18n/routing.ts        Locale list, default locale, URL prefix strategy
@@ -114,40 +116,72 @@ The app has a manifest and icons configured so it opens full-screen like a nativ
 ## Deploying on Home Assistant OS (NUC or similar)
 
 Home Assistant OS isn't a general-purpose Linux box — it's built around the
-Supervisor, which runs everything as Docker containers ("add-ons"). The
-`Dockerfile`, `config.yaml`, and `run.sh` in this repo make it installable
-as a **local add-on**, keeping everything (SQLite database, session secret)
-in the add-on's own persistent storage, with its own port and its own login
-— fully independent of Home Assistant's.
+Supervisor, which runs everything as Docker containers ("add-ons"). This
+repo supports both ways of getting an add-on onto the Supervisor. Either
+way, the app keeps everything (SQLite database, session secret) in the
+add-on's own persistent storage, with its own port and its own login —
+fully independent of Home Assistant's.
 
-1. **Get filesystem access to the NUC.** In Home Assistant, turn on
-   "Advanced Mode" on your user profile (click your name, bottom left),
-   then install either the **Samba share** add-on (drag-and-drop from your
-   PC/Mac) or **Terminal & SSH** (command-line) from the Add-on Store.
-2. **Copy this whole repository** to `/addons/stable_manager/` on the NUC
-   (via the Samba share, or `git clone` / `scp` over SSH). The folder must
-   contain `config.yaml` and `Dockerfile` at its root — that's what marks it
-   as an add-on.
-3. In the Home Assistant UI: **Settings → Add-ons → Add-on Store**, open the
-   "⋮" menu (top right) → **Check for updates**. "Stable Manager" should
-   appear under **Local add-ons** at the bottom of the store.
-4. Open it and click **Install**. This triggers a Docker build on the NUC —
-   several minutes the first time.
-5. Go to the **Configuration** tab and set `admin_email` and
+### Option A — add as a repository (recommended, no file copying)
+
+This is what `repository.yaml` and the `stable_manager/` folder are for —
+Home Assistant clones the repo itself and finds the add-on inside it.
+
+1. In Home Assistant: **Settings → Add-ons → Add-on Store**, open the "⋮"
+   menu (top right) → **Repositories**, and paste:
+   `https://github.com/arthurbabu/StableManager` → **Add**.
+2. Close that dialog; "Stable Manager" now appears as an installable add-on
+   in the store (scroll down, it's under its own repository section, not
+   "Local add-ons").
+3. Continue at **Configure & start** below.
+
+Pushing new commits to `main` doesn't auto-update installed add-ons —
+click **Check for updates** in the store's "⋮" menu, then **Update** on the
+add-on's page, whenever you want it to pick up changes.
+
+### Option B — local add-on (no GitHub push required)
+
+Useful if you're testing changes before pushing, or don't want the
+Supervisor pulling from GitHub at all.
+
+1. **Get filesystem access to the NUC.** Turn on "Advanced Mode" on your HA
+   user profile (click your name, bottom left), then install either the
+   **Samba share** add-on (drag-and-drop from your PC/Mac) or
+   **Terminal & SSH** (command-line) from the Add-on Store.
+2. Copy this whole repository to `/addons/stable_manager/` on the NUC (via
+   the Samba share, or `git clone` / `scp` over SSH). `config.yaml` and
+   `Dockerfile` at the repo root are what mark it as an add-on folder.
+3. In the HA UI: **Settings → Add-ons → Add-on Store**, "⋮" menu →
+   **Check for updates**. "Stable Manager" appears under **Local add-ons**.
+4. Continue at **Configure & start** below.
+
+### Configure & start (both options)
+
+1. Open the add-on, go to **Install** (several minutes the first
+   time — it's building the Docker image on the NUC).
+2. Go to the **Configuration** tab and set `admin_email` and
    `admin_password` (8+ characters) — this creates your one and only
    auto-provisioned account, with the ADMIN role. Leave `auth_secret` blank;
    one is generated and persisted for you on first start. Save.
-6. **Start** the add-on, and check the **Log** tab for
+3. **Start** the add-on, and check the **Log** tab for
    "Starting Stable Manager on 0.0.0.0:3000...".
-7. From any phone or PC on your home network, open
+4. From any phone or PC on your home network, open
    `http://<nuc-ip-or-hostname>:3000` and log in with the admin account from
-   step 5. From there, use **Staff Accounts** to create real logins for the
-   rest of the team — this path creates no demo data.
+   step 2. From there, use **Staff Accounts** to create real logins for the
+   rest of the team — neither path seeds any demo data.
 
 This deploys for **home-network access only**. To also reach it away from
 home, you'd need your own port-forward + dynamic DNS + TLS setup (there's no
 built-in Ingress/remote-access wiring here) — worth doing only if you
 specifically need that; it's a materially bigger setup than the above.
+
+Under the hood, `stable_manager/Dockerfile` (used by Option A) builds by
+cloning this same repo at build time, since Supervisor restricts a
+repository add-on's build context to its own subfolder — it can't reach the
+actual app source living at the repo root. `Dockerfile` at the repo root
+(used by Option B, and for plain `docker build .` elsewhere) builds directly
+from the checked-out files instead. Both produce the same app; keep them in
+sync if you change the build steps.
 
 See `DOCS.md` for the same instructions in the format Home Assistant shows
 in the add-on's own Documentation tab, including backup notes.

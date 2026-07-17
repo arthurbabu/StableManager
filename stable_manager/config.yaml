@@ -1,0 +1,24 @@
+name: "Stable Manager"
+version: "1.0.0"
+slug: "stable_manager"
+description: "Staff planning, vacations, competitions and horse care for your stable"
+arch:
+  - amd64
+  - aarch64
+init: false
+startup: application
+boot: auto
+ports:
+  3000/tcp: 3000
+ports_description:
+  3000/tcp: "Stable Manager web UI"
+options:
+  admin_email: ""
+  admin_password: ""
+  admin_name: "Admin"
+  auth_secret: ""
+schema:
+  admin_email: "email"
+  admin_password: "password"
+  admin_name: "str?"
+  auth_secret: "str?"
