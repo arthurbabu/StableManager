@@ -4,6 +4,12 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Self-hosted deployments (e.g. a home NUC reached via its LAN IP) have no
+  // fixed canonical domain for Auth.js to compare the Host header against,
+  // so its default host-header protection rejects every request. Safe to
+  // trust here since this app is scoped to home-network-only access anyway
+  // (see README) — there's no untrusted public edge in front of it.
+  trustHost: true,
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
