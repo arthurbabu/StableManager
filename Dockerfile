@@ -16,7 +16,12 @@ RUN apt-get update -y \
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+# `npm install` rather than `npm ci`: the lockfile was last generated with a
+# newer npm than the one bundled in this image, and different npm majors can
+# resolve transitive deps (e.g. @swc/helpers) slightly differently — `npm ci`
+# fails hard on that drift, `npm install` reconciles it. No downside here
+# since the resulting lockfile changes stay inside this ephemeral build.
+RUN npm install
 
 COPY . .
 

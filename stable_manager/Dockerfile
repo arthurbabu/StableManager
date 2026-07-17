@@ -20,7 +20,12 @@ ARG REPO_REF=main
 WORKDIR /app
 RUN git clone --depth 1 --branch "$REPO_REF" "$REPO_URL" .
 
-RUN npm ci
+# `npm install` rather than `npm ci`: the lockfile was last generated with a
+# newer npm than the one bundled in this image, and different npm majors can
+# resolve transitive deps (e.g. @swc/helpers) slightly differently — `npm ci`
+# fails hard on that drift, `npm install` reconciles it. No downside here
+# since the resulting lockfile changes stay inside this ephemeral build.
+RUN npm install
 
 # `next build` doesn't connect to the database (every route in this app is
 # dynamic — none are statically prerendered) but sets placeholders anyway in
