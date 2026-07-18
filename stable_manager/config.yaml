@@ -1,11 +1,10 @@
 name: "Stable Manager"
 version: "1.0.4"
-slug: "stable_manager"
+slug: "stable_manager_repo"
 description: "Staff planning, vacations, competitions and horse care for your stable"
 arch:
   - amd64
   - aarch64
-  - generic-x86-64
 init: false
 startup: application
 boot: auto
