@@ -5,14 +5,26 @@ import { format } from "date-fns";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { getDateFnsLocale } from "@/i18n/dateLocale";
-import { TASK_TYPES } from "@/lib/constants";
+import { TASK_TYPES, DEFAULT_TASK_COLOR } from "@/lib/constants";
 import { Button, Card, LinkButton, Select } from "@/components/ui";
 import { SlideOver } from "@/components/SlideOver";
 import { ShiftForm } from "./forms/ShiftForm";
 import { TaskForm } from "./forms/TaskForm";
 import { AddCompetitionForm } from "./forms/AddCompetitionForm";
 import { VacationReviewPanel } from "./forms/VacationReviewPanel";
-import { updateCareTask } from "../horses/actions";
+import { updateCareTask, toggleCareTaskDone } from "../horses/actions";
+
+/** Left-border (solid) and tinted-background style for a task's color, resolved per type. */
+function taskColorStyle(colorByType: Record<string, string>, type: string) {
+  const hex = colorByType[type] ?? DEFAULT_TASK_COLOR;
+  return {
+    borderLeftColor: hex,
+    // Mixing with `transparent` (rather than a flat lighter shade) yields a
+    // true alpha-blended tint, so it reads correctly over both light and
+    // dark surfaces without needing separate light/dark values per color.
+    backgroundColor: `color-mix(in srgb, ${hex} 18%, transparent)`,
+  };
+}
 
 const START_HOUR = 6;
 const END_HOUR = 20;
@@ -22,6 +34,11 @@ const GRID_HEIGHT = (END_HOUR - START_HOUR) * HOUR_HEIGHT;
 const HOURS = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 const DRAG_CLICK_THRESHOLD_PX = 8;
 const RESIZE_SNAP_MIN = 15;
+// On touch, dragging (to create or move) only arms after this hold, so a
+// normal swipe-to-scroll starting on the grid is never hijacked — mouse
+// input is unaffected and starts a drag immediately, as before.
+const LONG_PRESS_MS = 400;
+const LONG_PRESS_MOVE_TOLERANCE_PX = 10;
 
 function dayKey(d: Date) {
   return format(d, "yyyy-MM-dd");
@@ -239,9 +256,11 @@ export function CalendarInteractive({
   vacationsByDay,
   competitionsByDay,
   suggestionsByDay,
+  colorByType,
   staff,
   horses,
   isManager,
+  currentUserId,
   todayKey,
   defaultDateKey,
 }: {
@@ -251,9 +270,11 @@ export function CalendarInteractive({
   vacationsByDay: Record<string, VacationEntry[]>;
   competitionsByDay: Record<string, CompetitionEntry[]>;
   suggestionsByDay: Record<string, ReminderSuggestion[]>;
+  colorByType: Record<string, string>;
   staff: Person[];
   horses: Person[];
   isManager: boolean;
+  currentUserId: string;
   todayKey: string;
   defaultDateKey: string;
 }) {
@@ -274,6 +295,7 @@ export function CalendarInteractive({
   const [createDrag, setCreateDrag] = useState<{ dayKey: string; startY: number; currentY: number } | null>(null);
   const [taskDrag, setTaskDrag] = useState<TaskDragState | null>(null);
   const [isCommitting, startCommit] = useTransition();
+  const [, startToggle] = useTransition();
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const taskDragRef = useRef<TaskDragState | null>(null);
   useEffect(() => {
@@ -308,24 +330,93 @@ export function CalendarInteractive({
     return null;
   }
 
+  // Shared long-press arming for touch/pen input, used by both drag-to-create
+  // (empty grid space) and drag-to-move (an existing task block). Only one
+  // can be pending at a time, which is fine — this app doesn't support
+  // multi-touch gestures. Mouse input bypasses this entirely (see armOnHold).
+  const pendingHoldRef = useRef<{ startX: number; startY: number; timer: ReturnType<typeof setTimeout> } | null>(null);
+
+  function armOnHold(e: React.PointerEvent, begin: () => void) {
+    if (e.pointerType === "mouse") {
+      begin();
+      return;
+    }
+    cancelPendingHold();
+    pendingHoldRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      timer: setTimeout(() => {
+        pendingHoldRef.current = null;
+        begin();
+      }, LONG_PRESS_MS),
+    };
+  }
+
+  function checkPendingHoldMove(e: { clientX: number; clientY: number }) {
+    const pending = pendingHoldRef.current;
+    if (!pending) return;
+    const dx = e.clientX - pending.startX;
+    const dy = e.clientY - pending.startY;
+    if (Math.abs(dx) > LONG_PRESS_MOVE_TOLERANCE_PX || Math.abs(dy) > LONG_PRESS_MOVE_TOLERANCE_PX) {
+      cancelPendingHold();
+    }
+  }
+
+  function cancelPendingHold() {
+    if (pendingHoldRef.current) {
+      clearTimeout(pendingHoldRef.current.timer);
+      pendingHoldRef.current = null;
+    }
+  }
+
+  function canToggleTask(task: { assignedToId: string | null }) {
+    return isManager || task.assignedToId === currentUserId;
+  }
+
+  function toggleDone(task: { id: string; horseId: string; done: boolean }) {
+    const formData = new FormData();
+    formData.set("id", task.id);
+    formData.set("horseId", task.horseId);
+    formData.set("done", (!task.done).toString());
+    startToggle(async () => {
+      try {
+        await toggleCareTaskDone(formData);
+      } catch {
+        // Best-effort — matches how other background mutations in this
+        // component (e.g. the drag-move commit) fail silently; the UI just
+        // won't reflect the change if it errors, no toast system in this app.
+      }
+    });
+  }
+
   function startTaskMove(e: React.PointerEvent<HTMLDivElement>, task: TimedTask, originKey: string) {
     if (!isManager) return;
     e.stopPropagation();
-    const dayEl = dayRefs.current[originKey];
-    const rect = dayEl?.getBoundingClientRect();
-    const offsetY = rect ? Math.min(Math.max(e.clientY - rect.top, 0), GRID_HEIGHT) : 0;
-    const startMin = toMinutes(task.startTime);
-    setTaskDrag({
-      mode: "move",
-      task,
-      originDayKey: originKey,
-      pointerStartX: e.clientX,
-      pointerStartY: e.clientY,
-      grabOffsetMin: rawMinutesFromOffset(offsetY) - startMin,
-      currentDayKey: originKey,
-      currentStartMin: startMin,
-      currentEndMin: toMinutes(task.endTime),
-      moved: false,
+    armOnHold(e, () => {
+      const dayEl = dayRefs.current[originKey];
+      const rect = dayEl?.getBoundingClientRect();
+      const offsetY = rect ? Math.min(Math.max(e.clientY - rect.top, 0), GRID_HEIGHT) : 0;
+      const startMin = toMinutes(task.startTime);
+      // Capture on the stable day column, not the task block itself — the
+      // block unmounts as soon as taskDrag is set (it's excluded from that
+      // day's layout while dragging, replaced by a floating preview), and a
+      // capture tied to an element that's about to disappear is exactly the
+      // bug fixed previously by moving move/up tracking to window listeners.
+      // Capturing on a stable element here is extra insurance for the
+      // pointer-capture-suppresses-native-scroll behavior this relies on.
+      dayEl?.setPointerCapture(e.pointerId);
+      setTaskDrag({
+        mode: "move",
+        task,
+        originDayKey: originKey,
+        pointerStartX: e.clientX,
+        pointerStartY: e.clientY,
+        grabOffsetMin: rawMinutesFromOffset(offsetY) - startMin,
+        currentDayKey: originKey,
+        currentStartMin: startMin,
+        currentEndMin: toMinutes(task.endTime),
+        moved: false,
+      });
     });
   }
 
@@ -510,6 +601,9 @@ export function CalendarInteractive({
             >
               {t("addCompetition")}
             </Button>
+            <LinkButton href="/settings/colors" variant="secondary" className="px-2 py-1 text-xs">
+              {t("customizeColors")}
+            </LinkButton>
           </div>
         )}
       </div>
@@ -638,18 +732,34 @@ export function CalendarInteractive({
                     </Link>
                   ))}
                   {dayUntimedTasks.map((task) => (
-                    <button
+                    <div
                       key={task.id}
-                      type="button"
-                      onClick={() => isManager && setPanel({ kind: "task", date: key, existing: taskToExisting(task, dayKey(task.date)) })}
-                      title={`${task.horse.name} — ${tTaskTypes(task.type)}${task.assignedTo ? ` (${task.assignedTo.name})` : ""}`}
-                      className={`block w-full truncate rounded-md border-l-[3px] px-1.5 py-0.5 text-left text-[11px] font-medium text-stone-700 dark:text-stone-100 ${
-                        task.done ? "opacity-50 line-through" : ""
-                      } ${isManager ? "cursor-pointer" : ""}`}
-                      style={{ borderLeftColor: "var(--cal-task)", backgroundColor: "var(--cal-task-bg)" }}
+                      className="flex items-center gap-1 rounded-md border-l-[3px] px-1.5 py-0.5 text-[11px] font-medium text-stone-700 dark:text-stone-100"
+                      style={taskColorStyle(colorByType, task.type)}
                     >
-                      {task.horse.name} · {tTaskTypes(task.type)}
-                    </button>
+                      {canToggleTask(task) && (
+                        <button
+                          type="button"
+                          onClick={() => toggleDone(task)}
+                          aria-label={task.done ? tHorseDetail("markNotDone") : tHorseDetail("markDone")}
+                          className={`h-2.5 w-2.5 shrink-0 rounded-full border-2 ${
+                            task.done ? "border-emerald-600 bg-emerald-600" : "border-stone-400 dark:border-neutral-500"
+                          }`}
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          isManager && setPanel({ kind: "task", date: key, existing: taskToExisting(task, dayKey(task.date)) })
+                        }
+                        title={`${task.horse.name} — ${tTaskTypes(task.type)}${task.assignedTo ? ` (${task.assignedTo.name})` : ""}`}
+                        className={`min-w-0 flex-1 truncate text-left ${task.done ? "opacity-50 line-through" : ""} ${
+                          isManager ? "cursor-pointer" : ""
+                        }`}
+                      >
+                        {task.horse.name} · {tTaskTypes(task.type)}
+                      </button>
+                    </div>
                   ))}
                   {daySuggestions.map((s) => (
                     <button
@@ -667,7 +777,7 @@ export function CalendarInteractive({
                       className={`block w-full truncate rounded-md border-l-[3px] border-dashed px-1.5 py-0.5 text-left text-[11px] font-medium text-stone-700 opacity-80 dark:text-stone-100 ${
                         isManager ? "cursor-pointer" : ""
                       }`}
-                      style={{ borderLeftColor: "var(--cal-task)", backgroundColor: "var(--cal-task-bg)" }}
+                      style={taskColorStyle(colorByType, s.type)}
                     >
                       {s.horseName} · {tTaskTypes(s.type)} 🔔
                     </button>
@@ -723,16 +833,19 @@ export function CalendarInteractive({
                   onPointerDown={
                     isManager
                       ? (e) => {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          const offsetY = Math.min(Math.max(e.clientY - rect.top, 0), GRID_HEIGHT);
-                          e.currentTarget.setPointerCapture(e.pointerId);
-                          setCreateDrag({ dayKey: key, startY: offsetY, currentY: offsetY });
+                          armOnHold(e, () => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const offsetY = Math.min(Math.max(e.clientY - rect.top, 0), GRID_HEIGHT);
+                            e.currentTarget.setPointerCapture(e.pointerId);
+                            setCreateDrag({ dayKey: key, startY: offsetY, currentY: offsetY });
+                          });
                         }
                       : undefined
                   }
                   onPointerMove={
                     isManager
                       ? (e) => {
+                          checkPendingHoldMove(e);
                           if (!createDrag || createDrag.dayKey !== key) return;
                           const rect = e.currentTarget.getBoundingClientRect();
                           const offsetY = Math.min(Math.max(e.clientY - rect.top, 0), GRID_HEIGHT);
@@ -743,6 +856,7 @@ export function CalendarInteractive({
                   onPointerUp={
                     isManager
                       ? () => {
+                          cancelPendingHold();
                           if (!createDrag || createDrag.dayKey !== key) return;
                           const isClick = Math.abs(createDrag.currentY - createDrag.startY) < DRAG_CLICK_THRESHOLD_PX;
                           const range = isClick
@@ -756,7 +870,7 @@ export function CalendarInteractive({
                   className={`relative border-l border-stone-100 dark:border-neutral-800/60 ${
                     isManager ? "cursor-crosshair" : ""
                   }`}
-                  style={{ height: GRID_HEIGHT, touchAction: isManager ? "none" : undefined }}
+                  style={{ height: GRID_HEIGHT }}
                 >
                   {HOURS.slice(0, -1).map((h, i) => (
                     <div
@@ -790,6 +904,8 @@ export function CalendarInteractive({
                       <div
                         key={task.id}
                         onPointerDown={(e) => startTaskMove(e, task, key)}
+                        onPointerMove={isManager ? checkPendingHoldMove : undefined}
+                        onPointerUp={isManager ? cancelPendingHold : undefined}
                         title={`${task.horse.name}: ${task.startTime}–${task.endTime} — ${tTaskTypes(task.type)}${task.assignedTo ? ` (${task.assignedTo.name})` : ""}`}
                         className={`group absolute overflow-hidden rounded-md border-l-[3px] px-1.5 py-0.5 text-[11px] text-stone-700 shadow-sm dark:text-stone-100 ${
                           task.done ? "opacity-50 line-through" : ""
@@ -799,15 +915,31 @@ export function CalendarInteractive({
                           height: task.height,
                           left: `${task.col * widthPct}%`,
                           width: `calc(${widthPct}% - 2px)`,
-                          borderLeftColor: "var(--cal-task)",
-                          backgroundColor: "var(--cal-task-bg)",
-                          touchAction: isManager ? "none" : undefined,
+                          ...taskColorStyle(colorByType, task.type),
                         }}
                       >
-                        <p className="truncate font-medium">{task.horse.name}</p>
-                        <p className="truncate opacity-80">
-                          {tTaskTypes(task.type)} · {task.startTime}–{task.endTime}
-                        </p>
+                        <div className="flex items-start gap-1">
+                          {canToggleTask(task) && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleDone(task);
+                              }}
+                              onPointerDown={(e) => e.stopPropagation()}
+                              aria-label={task.done ? tHorseDetail("markNotDone") : tHorseDetail("markDone")}
+                              className={`mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full border-2 ${
+                                task.done ? "border-emerald-600 bg-emerald-600" : "border-stone-400 dark:border-neutral-500"
+                              }`}
+                            />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-medium">{task.horse.name}</p>
+                            <p className="truncate opacity-80">
+                              {tTaskTypes(task.type)} · {task.startTime}–{task.endTime}
+                            </p>
+                          </div>
+                        </div>
                         {isManager && (
                           <>
                             <div
@@ -836,8 +968,7 @@ export function CalendarInteractive({
                         height: Math.max(toGridPx(taskDrag.currentEndMin) - toGridPx(taskDrag.currentStartMin), 22),
                         left: 0,
                         width: "calc(100% - 2px)",
-                        borderLeftColor: "var(--cal-task)",
-                        backgroundColor: "var(--cal-task-bg)",
+                        ...taskColorStyle(colorByType, taskDrag.task.type),
                         zIndex: 30,
                         opacity: 0.95,
                       }}

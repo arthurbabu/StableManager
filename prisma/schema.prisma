@@ -27,11 +27,13 @@ enum HorseSex {
 
 enum TaskType {
   FEEDING
-  GROOMING
-  TRAINING
   FARRIER
   VET
-  TURNOUT
+  HORSE_WALKER
+  RIDE
+  TROTTING
+  LUNGE
+  PADDOCK
   ENTRY
   EXIT
   OTHER
@@ -118,14 +120,20 @@ model CareTask {
   done             Boolean   @default(false)
   createdAt        DateTime  @default(now())
   location          String? // ENTRY: provenance address · EXIT: destination address
-  reminderDelayDays Int? // VET: days after `date` when a follow-up is due — stored as
-  // an offset (not an absolute date) so it stays correct if `date` is later edited
+  reminderDelayDays Int? // VET/FARRIER: days after `date` when a follow-up is due —
+  // stored as an offset (not an absolute date) so it stays correct if `date` is later edited
 
   horse      Horse @relation(fields: [horseId], references: [id], onDelete: Cascade)
   assignedTo User? @relation(fields: [assignedToId], references: [id])
 
   @@index([date])
   @@index([horseId])
+}
+
+/** User-customizable calendar color per task type. Types without a row here use the app default. */
+model TaskTypeColor {
+  type  TaskType @id
+  color String // hex, e.g. "#1baf7a"
 }
 
 model Competition {

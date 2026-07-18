@@ -104,23 +104,40 @@ export async function createCareTask(formData: FormData) {
   const notes = String(formData.get("notes") ?? "").trim() || null;
   const location = String(formData.get("location") ?? "").trim() || null;
   const reminderDelayDays = parseOptionalInt(formData.get("reminderDelayDays"));
+  const repeatUntilRaw = String(formData.get("repeatUntil") ?? "").trim();
 
   if (!horseId || !type || !date) {
     throw new Error("Task type and date are required.");
   }
 
-  await prisma.careTask.create({
-    data: {
+  const startDate = new Date(date);
+  const occurrenceDates = [startDate];
+
+  if (repeatUntilRaw) {
+    const until = new Date(repeatUntilRaw);
+    if (until > startDate) {
+      const MAX_OCCURRENCES = 180; // ~6 months of daily repeats, a sane upper bound
+      occurrenceDates.length = 0;
+      const cursor = new Date(startDate);
+      while (cursor <= until && occurrenceDates.length < MAX_OCCURRENCES) {
+        occurrenceDates.push(new Date(cursor));
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    }
+  }
+
+  await prisma.careTask.createMany({
+    data: occurrenceDates.map((occurrenceDate) => ({
       horseId,
       type: type as TaskType,
-      date: new Date(date),
+      date: occurrenceDate,
       startTime,
       endTime,
       assignedToId,
       notes,
       location,
       reminderDelayDays,
-    },
+    })),
   });
 
   revalidatePath(`/horses/${horseId}`);

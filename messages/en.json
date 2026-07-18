@@ -29,14 +29,16 @@
   },
   "TaskTypes": {
     "FEEDING": "Feeding",
-    "GROOMING": "Grooming",
-    "TRAINING": "Training",
     "FARRIER": "Farrier",
     "VET": "Vet",
-    "TURNOUT": "Turnout",
-    "OTHER": "Other",
+    "HORSE_WALKER": "Horse walker",
+    "RIDE": "Ride",
+    "TROTTING": "Trotting",
+    "LUNGE": "Lunge",
+    "PADDOCK": "Paddock",
     "ENTRY": "Entry",
-    "EXIT": "Exit"
+    "EXIT": "Exit",
+    "OTHER": "Other"
   },
   "HorseSex": {
     "MARE": "Mare",
@@ -86,8 +88,8 @@
     "noCompetitions": "No competitions scheduled.",
     "entries": "{count, plural, one {# entry} other {# entries}}",
     "viewAllCompetitions": "View all competitions →",
-    "vetReminders": "Vet reminders",
-    "noVetReminders": "No upcoming reminders."
+    "reminders": "Reminders",
+    "noReminders": "No upcoming reminders."
   },
   "Staff": {
     "title": "Staff schedule",
@@ -150,7 +152,9 @@
     "nextReminderLabel": "Next reminder: {date}",
     "locationOptional": "Origin/destination address (optional)",
     "reminderDelayDays": "Reminder in (days)",
-    "reminderDelayDaysPlaceholder": "e.g. 365"
+    "reminderDelayDaysPlaceholder": "e.g. 365",
+    "repeatDaily": "Repeat daily",
+    "repeatUntil": "Until"
   },
   "Competitions": {
     "title": "Competitions",
@@ -206,7 +210,8 @@
     "allCategories": "All categories",
     "editShift": "Edit shift",
     "editTask": "Edit task",
-    "reminderSuggestion": "Suggested reminder — click to create the task"
+    "reminderSuggestion": "Suggested reminder — click to create the task",
+    "customizeColors": "Customize colors"
   },
   "Register": {
     "title": "Breeding register",
@@ -214,5 +219,10 @@
     "periodFrom": "From",
     "periodTo": "To",
     "generateButton": "Generate PDF"
+  },
+  "Settings": {
+    "colorsTitle": "Task colors",
+    "colorsSubtitle": "Pick a color per task type, used on the calendar.",
+    "resetColor": "Reset"
   }
 }

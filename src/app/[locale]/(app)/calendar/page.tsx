@@ -28,7 +28,7 @@ export default async function CalendarPage({
   const weekEnd = endOfWeek(anchor, { weekStartsOn: 1 });
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
-  const [shifts, careTasks, vacations, competitions, staff, horses, reminderSources] = await Promise.all([
+  const [shifts, careTasks, vacations, competitions, staff, horses, reminderSources, taskTypeColors] = await Promise.all([
     prisma.shift.findMany({
       where: { date: { gte: weekStart, lte: weekEnd } },
       include: { user: true },
@@ -60,9 +60,10 @@ export default async function CalendarPage({
     // visible week the way the other queries are — the due date only gets
     // computed (and matched against the week) below.
     prisma.careTask.findMany({
-      where: { type: "VET", reminderDelayDays: { not: null } },
+      where: { type: { in: ["VET", "FARRIER"] }, reminderDelayDays: { not: null } },
       include: { horse: true, assignedTo: true },
     }),
+    prisma.taskTypeColor.findMany(),
   ]);
 
   const shiftsByDay: Record<string, typeof shifts> = {};
@@ -126,6 +127,8 @@ export default async function CalendarPage({
     });
   }
 
+  const colorByType = Object.fromEntries(taskTypeColors.map((c) => [c.type, c.color]));
+
   const prevWeek = format(addWeeks(weekStart, -1), "yyyy-MM-dd");
   const nextWeek = format(addWeeks(weekStart, 1), "yyyy-MM-dd");
   const todayKey = dayKey(today);
@@ -161,9 +164,11 @@ export default async function CalendarPage({
         vacationsByDay={vacationsByDay}
         competitionsByDay={competitionsByDay}
         suggestionsByDay={suggestionsByDay}
+        colorByType={colorByType}
         staff={staff}
         horses={horses}
         isManager={isManager}
+        currentUserId={user.id}
         todayKey={todayKey}
         defaultDateKey={anchorKey}
       />

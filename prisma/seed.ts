@@ -112,13 +112,13 @@ async function main() {
   });
 
   // Care tasks
-  const taskTypes: Array<"FEEDING" | "GROOMING" | "TRAINING" | "FARRIER" | "VET" | "TURNOUT"> = [
+  const taskTypes: Array<"FEEDING" | "HORSE_WALKER" | "RIDE" | "FARRIER" | "VET" | "PADDOCK"> = [
     "FEEDING",
-    "GROOMING",
-    "TRAINING",
+    "HORSE_WALKER",
+    "RIDE",
     "FARRIER",
     "VET",
-    "TURNOUT",
+    "PADDOCK",
   ];
   for (const [i, horse] of horses.entries()) {
     await prisma.careTask.create({
@@ -133,7 +133,7 @@ async function main() {
     await prisma.careTask.create({
       data: {
         horseId: horse.id,
-        type: "GROOMING",
+        type: "RIDE",
         date: addDays(today, 1),
         assignedToId: i % 2 === 0 ? groom2.id : groom1.id,
       },

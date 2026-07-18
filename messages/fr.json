@@ -29,14 +29,16 @@
   },
   "TaskTypes": {
     "FEEDING": "Alimentation",
-    "GROOMING": "Pansage",
-    "TRAINING": "Entraînement",
     "FARRIER": "Maréchal-ferrant",
     "VET": "Vétérinaire",
-    "TURNOUT": "Sortie au pré",
-    "OTHER": "Autre",
+    "HORSE_WALKER": "Marcheur",
+    "RIDE": "Monte",
+    "TROTTING": "Trot",
+    "LUNGE": "Longe",
+    "PADDOCK": "Paddock",
     "ENTRY": "Entrée",
-    "EXIT": "Sortie"
+    "EXIT": "Sortie",
+    "OTHER": "Autre"
   },
   "HorseSex": {
     "MARE": "Jument",
@@ -86,8 +88,8 @@
     "noCompetitions": "Aucun concours programmé.",
     "entries": "{count, plural, one {# engagé} other {# engagés}}",
     "viewAllCompetitions": "Voir tous les concours →",
-    "vetReminders": "Rappels vétérinaires",
-    "noVetReminders": "Aucun rappel à venir."
+    "reminders": "Rappels",
+    "noReminders": "Aucun rappel à venir."
   },
   "Staff": {
     "title": "Planning du personnel",
@@ -150,7 +152,9 @@
     "nextReminderLabel": "Prochain rappel : {date}",
     "locationOptional": "Adresse de provenance/destination (optionnel)",
     "reminderDelayDays": "Rappel dans (jours)",
-    "reminderDelayDaysPlaceholder": "ex. 365"
+    "reminderDelayDaysPlaceholder": "ex. 365",
+    "repeatDaily": "Répéter chaque jour",
+    "repeatUntil": "Jusqu'au"
   },
   "Competitions": {
     "title": "Concours",
@@ -206,7 +210,8 @@
     "allCategories": "Toutes les catégories",
     "editShift": "Modifier le service",
     "editTask": "Modifier la tâche",
-    "reminderSuggestion": "Rappel suggéré — cliquer pour créer la tâche"
+    "reminderSuggestion": "Rappel suggéré — cliquer pour créer la tâche",
+    "customizeColors": "Personnaliser les couleurs"
   },
   "Register": {
     "title": "Registre d'élevage",
@@ -214,5 +219,10 @@
     "periodFrom": "Du",
     "periodTo": "Au",
     "generateButton": "Générer le PDF"
+  },
+  "Settings": {
+    "colorsTitle": "Couleurs des tâches",
+    "colorsSubtitle": "Choisissez une couleur par type de tâche pour le calendrier.",
+    "resetColor": "Réinitialiser"
   }
 }

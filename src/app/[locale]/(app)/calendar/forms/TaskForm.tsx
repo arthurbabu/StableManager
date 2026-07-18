@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Button, Input, Select } from "@/components/ui";
-import { TASK_TYPES, LOCATION_TASK_TYPES } from "@/lib/constants";
+import { TASK_TYPES, LOCATION_TASK_TYPES, REMINDER_TASK_TYPES } from "@/lib/constants";
 import { createCareTask, updateCareTask, deleteCareTask } from "../../horses/actions";
 
 type TaskType = (typeof TASK_TYPES)[number];
@@ -55,9 +55,11 @@ export function TaskForm({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [type, setType] = useState<TaskType | "">(task?.type ?? prefill?.type ?? "");
+  const [repeatDaily, setRepeatDaily] = useState(false);
   const isEdit = !!task;
   const showLocation = LOCATION_TASK_TYPES.includes(type as (typeof LOCATION_TASK_TYPES)[number]);
-  const showReminder = type === "VET";
+  const showReminder = REMINDER_TASK_TYPES.includes(type as (typeof REMINDER_TASK_TYPES)[number]);
+  const showRepeat = !isEdit && type === "FEEDING";
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -143,6 +145,25 @@ export function TaskForm({
             placeholder={t("reminderDelayDaysPlaceholder")}
             defaultValue={task?.reminderDelayDays ?? ""}
           />
+        </div>
+      )}
+      {showRepeat && (
+        <div className="space-y-2 rounded-lg bg-stone-50 p-2.5 dark:bg-neutral-800">
+          <label className="flex items-center gap-2 text-sm text-stone-700 dark:text-stone-200">
+            <input
+              type="checkbox"
+              checked={repeatDaily}
+              onChange={(e) => setRepeatDaily(e.target.checked)}
+              className="h-4 w-4 rounded border-stone-300 text-emerald-700 focus:ring-emerald-600 dark:border-neutral-600"
+            />
+            {t("repeatDaily")}
+          </label>
+          {repeatDaily && (
+            <div>
+              <label className="mb-1 block text-xs text-stone-500 dark:text-stone-400">{t("repeatUntil")}</label>
+              <Input type="date" name="repeatUntil" required={repeatDaily} min={date} />
+            </div>
+          )}
         </div>
       )}
       <Input type="text" name="notes" placeholder={tCommon("notes")} defaultValue={task?.notes ?? prefill?.notes ?? ""} />

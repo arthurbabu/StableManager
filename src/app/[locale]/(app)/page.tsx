@@ -15,7 +15,7 @@ export default async function DashboardPage() {
   const todayStart = startOfDay(new Date());
   const todayEnd = endOfDay(new Date());
 
-  const [todaysShifts, myTasksToday, upcomingVacations, pendingVacations, upcomingCompetitions, vetReminderCandidates] =
+  const [todaysShifts, myTasksToday, upcomingVacations, pendingVacations, upcomingCompetitions, reminderCandidates] =
     await Promise.all([
       prisma.shift.findMany({
         where: { date: { gte: todayStart, lte: todayEnd } },
@@ -54,7 +54,7 @@ export default async function DashboardPage() {
         include: { entries: true },
       }),
       prisma.careTask.findMany({
-        where: { type: "VET", reminderDelayDays: { not: null } },
+        where: { type: { in: ["VET", "FARRIER"] }, reminderDelayDays: { not: null } },
         include: { horse: true },
       }),
     ]);
@@ -62,7 +62,7 @@ export default async function DashboardPage() {
   // reminderDelayDays is an offset from `date`, not a stored absolute date
   // (see CareTask.reminderDelayDays), so the due date has to be computed
   // here rather than filtered/sorted in the query itself.
-  const vetReminders = vetReminderCandidates
+  const reminders = reminderCandidates
     .map((task) => ({ task, dueDate: addDays(task.date, task.reminderDelayDays!) }))
     .filter(({ dueDate }) => dueDate <= addDays(todayStart, 30))
     .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())
@@ -198,13 +198,13 @@ export default async function DashboardPage() {
 
         <Card>
           <h2 className="mb-3 font-medium text-stone-900 dark:text-stone-50">
-            {t("vetReminders")}
+            {t("reminders")}
           </h2>
-          {vetReminders.length === 0 ? (
-            <EmptyState message={t("noVetReminders")} />
+          {reminders.length === 0 ? (
+            <EmptyState message={t("noReminders")} />
           ) : (
             <ul className="space-y-2">
-              {vetReminders.map(({ task, dueDate }) => {
+              {reminders.map(({ task, dueDate }) => {
                 const overdue = dueDate < todayStart;
                 return (
                   <li key={task.id}>
