@@ -16,6 +16,10 @@ RUN apt-get update -y \
 WORKDIR /app
 
 COPY package.json package-lock.json ./
+# prisma/schema.prisma must exist before `npm install` runs, since that
+# triggers the `postinstall: prisma generate` script (see package.json) —
+# without this, generate fails with "Could not find Prisma Schema".
+COPY prisma ./prisma
 # `npm install` rather than `npm ci`: the lockfile was last generated with a
 # newer npm than the one bundled in this image, and different npm majors can
 # resolve transitive deps (e.g. @swc/helpers) slightly differently — `npm ci`
